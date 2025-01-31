@@ -35,7 +35,7 @@ class WizardClockCard extends HTMLElement {
     this.zones = [];
     this.targetstate = [];
     this.exclude = [];
-	this.wizardImages = [];
+    this.wizardImages = [];
   
     if (this.lastframe && this.lastframe != 0){
       cancelAnimationFrame(this.lastframe);
@@ -69,10 +69,11 @@ class WizardClockCard extends HTMLElement {
         this.zones.push(stateStr);
       }
 
-		var img = new Image();
-		if (state && state.attributes && state.attributes.entity_picture)
-			img.src = state.attributes.entity_picture;
-	  this.wizardImages.push(img);
+      /* Create an image object for each wizard, and assign the URL if we can find one. Images will only be displayed once they have completed loading. */
+      var img = new Image();
+      if (this.show_images==1 && state && state.attributes && state.attributes.entity_picture)
+        img.src = state.attributes.entity_picture;
+      this.wizardImages.push(img);
     }
 
     if (this.zones.length < this.min_location_slots) {
@@ -107,6 +108,7 @@ class WizardClockCard extends HTMLElement {
     this.lostState = config.lost ? config.lost : "Away";
     this.travellingState = config.travelling ? config.travelling : "Away";
     this.min_location_slots = this.config.min_location_slots ? this.config.min_location_slots : 0;
+    this.show_images=this.config.show_images ? (this.config.show_images=="Yes" ? 1 : 0) : 0;
     
     if (this.config.shaft_colour){
       this.shaft_colour = this.config.shaft_colour;
@@ -386,14 +388,9 @@ class WizardClockCard extends HTMLElement {
         // Check both velocity and proximity for movement
         const stateVelo = state && state.attributes ? (
           state.attributes.velocity ? state.attributes.velocity : (
+            state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
             state.attributes.moving ? 16 : 0
-          )) : 0;
-
-        // New: Check proximity direction sensor if configured
-        const isMovingByProximity = wizards[num].proximity_sensor &&
-          this._hass.states[wizards[num].proximity_sensor] &&
-          ['towards', 'away_from'].includes(this._hass.states[wizards[num].proximity_sensor].state);
-
+          ))) : 0; 
         var locnum;
         var wizardOffset = ((num-((wizards.length-1)/2)) / wizards.length * 0.6);
         var location = wizardOffset; // default
