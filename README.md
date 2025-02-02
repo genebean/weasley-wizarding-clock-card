@@ -1,7 +1,7 @@
 # WizardClock
 A wizarding/location "clock" Lovelace component for Home Assistant
 
-<img src="example.png" alt="Example wizarding clock" width="400">
+<img src="https://github.com/malcolmrigg/wizard-clock-card/blob/b2e0aceb89325320038c2363e971ba0224a00d7d/example.png" alt="Example wizarding clock" width="400">
 
 ## About
 
