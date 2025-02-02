@@ -30,14 +30,14 @@ I decided to make it public so that other (more skillful) people could make use 
 ### HACS
 
 Add this repository as a custom repository in HACS: 
-* On your Home Assistant sidebar menu, go to HACS > Frontend
-* Click on the 3-dot overflow menu in the upper right, and select custom repositories item.
-* Copy / paste https://github.com/malcolmrigg/wizard-clock-card in the Repository textbox and select Dashboard for the category entry.
-* Click on Add to add the custom repository.
-* You can then click on the Wizard Clock Card repository entry (you may need to filter your list first to find the new entry).
-* Click on download to start the download.
-* Go back on your dashboard and click on the icon at the right top corner then on Edit dashboard.
-* You can now click on Add card in the bottom right corner and search for "Custom: Wizard Clock Card".
+1. On your Home Assistant sidebar menu, go to HACS > Frontend
+2. Click on the 3-dot overflow menu in the upper right, and select custom repositories item.
+3. Copy / paste https://github.com/malcolmrigg/wizard-clock-card in the Repository textbox and select Dashboard for the category entry.
+4. Click on Add to add the custom repository.
+5. You can then click on the Wizard Clock Card repository entry (you may need to filter your list first to find the new entry).
+6. Click on download to start the download.
+7. Go back on your dashboard and click on the icon at the right top corner then on Edit dashboard.
+8. You can now click on Add card in the bottom right corner and search for "Custom: Wizard Clock Card".
 
 ### Manual
 
@@ -45,8 +45,8 @@ Add this repository as a custom repository in HACS:
 2. Go to Settings -> Dashboards, then hit the three dots to open the custom Resources editor.
 3. Select "JavaScript Module" as the resource type, then add the URL "/local/custom-lovelace/wizard-clock-card.js?v=1" (note if you put the javascript file somewhere other than www/custom-lovelace/ you'll need to modify this accordingly).
 5. Hit save.
-6. Edit the dashboard you want to add it to, then add a "Manual" card. 
-7. Add your config, see the example below
+6. Go back on your dashboard and click on the icon at the right top corner then on Edit dashboard.
+7. You can now click on Add card in the bottom right corner and search for "Custom: Wizard Clock Card".
 
 
 #### Manual Updates
