@@ -29,8 +29,15 @@ I decided to make it public so that other (more skillful) people could make use 
 
 ### HACS
 
-Add this repository as a custom repository in HACS. Not in the default HACS repository yet, but a request has been submitted and it's in the queue.
-Updates are automatic.
+Add this repository as a custom repository in HACS: 
+* On your Home Assistant sidebar menu, go to HACS > Frontend
+* Click on the 3-dot overflow menu in the upper right, and select custom repositories item.
+* Copy / paste https://github.com/malcolmrigg/wizard-clock-card in the Repository textbox and select Dashboard for the category entry.
+* Click on Add to add the custom repository.
+* You can then click on the Wizard Clock Card repository entry (you may need to filter your list first to find the new entry).
+* Click on download to start the download.
+* Go back on your dashboard and click on the icon at the right top corner then on Edit dashboard.
+* You can now click on Add card in the bottom right corner and search for "Custom: Wizard Clock Card".
 
 ### Manual
 
