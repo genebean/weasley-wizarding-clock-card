@@ -245,16 +245,18 @@ class WizardClockCard extends HTMLElement {
           var startAngle = 0; 
           var inwardFacing = true;
           var kerning = 0; // can adjust kerning using this - maybe automatically adjust it based on text length? 
-          var text = locations[num].split("").reverse().join("");
+	  /* Switched to using an array to split the text into - this means that unicode characters (i.e. emojis etc.) 
+             are handled correctly */
+	  var textArray = Array.from(locations[num]).reverse();
           // if we're in the bottom half of the clock then reverse the facing of the text so that it's not upside down
           if (ang > Math.PI / 2 && ang < ((Math.PI * 2) - (Math.PI / 2)))
           {
             startAngle = Math.PI;
             inwardFacing = false;
-            text = locations[num];
+            textArray = textArray.reverse();
           }
 
-          text = this.isRtlLanguage(text) ? text.split("").reverse().join("") : text;
+          textArray = this.isRtlLanguage(locations[num]) ? textArray.reverse() : textArray;
 
           // calculate height of the font. Many ways to do this - you can replace with your own!
           var div = document.createElement("div");
@@ -269,22 +271,24 @@ class WizardClockCard extends HTMLElement {
           document.body.removeChild(div);
 
           // rotate 50% of total angle for center alignment
-          for (var j = 0; j < text.length; j++) {
-              var charWid = ctx.measureText(text[j]).width;
-              startAngle += ((charWid + (j == text.length-1 ? 0 : kerning)) / (radius - textHeight)) / 2 ;
+	  var j=0; // to count the number of chars
+	  for (const character of textArray){
+              var charWid = ctx.measureText(character).width;
+              startAngle += ((charWid + (j == textArray.length-1 ? 0 : kerning)) / (radius - textHeight)) / 2 ;
+	      j++;
           }
 
           // Phew... now rotate into final start position
           ctx.rotate(startAngle);
 
           // Now for the fun bit: draw, rotate, and repeat
-          for (var j = 0; j < text.length; j++) {
-              var charWid = ctx.measureText(text[j]).width; // half letter
+	  for (const character of textArray){
+              var charWid = ctx.measureText(character).width; // half letter
               // rotate half letter
               ctx.rotate((charWid/2) / (radius - textHeight) * -1); 
               // draw the character at "top" or "bottom" 
               // depending on inward or outward facing
-              ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - radius + textHeight ));
+              ctx.fillText(character, 0, (inwardFacing ? 1 : -1) * (0 - radius + textHeight ));
 
               ctx.rotate((charWid/2 + kerning) / (radius - textHeight) * -1); // rotate half letter
           }
