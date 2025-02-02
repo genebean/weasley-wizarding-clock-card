@@ -260,7 +260,7 @@ class WizardClockCard extends HTMLElement {
 
           // calculate height of the font. Many ways to do this - you can replace with your own!
           var div = document.createElement("div");
-          div.innerHTML = text;
+          div.innerHTML = locations[num];
           div.style.position = 'absolute';
           div.style.top = '-10000px';
           div.style.left = '-10000px';
