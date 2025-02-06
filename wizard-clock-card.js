@@ -16,6 +16,7 @@ class WizardClockCard extends HTMLElement {
       this.lastframe = 0;
     }
 
+    /* First we need to build the list of locations that need to be displayed on the clock - start with those defined in the config */
     var num;
     if (this.config.locations){
       for (num = 0; num < this.config.locations.length; num++){
@@ -24,6 +25,7 @@ class WizardClockCard extends HTMLElement {
         }
       }
     }
+    /* de-duplicate the list of exclusions */
     if (this.config.exclude){
       for (num = 0; num < this.config.exclude.length; num++){
         if (this.exclude.indexOf(this.config.exclude[num]) == -1){
@@ -31,6 +33,7 @@ class WizardClockCard extends HTMLElement {
         }
       }
     }
+    /* If the lost and travelling config is defined then add this too */
     if (this.config.lost){
       this.zones.push(this.config.lost);
     }
@@ -38,6 +41,7 @@ class WizardClockCard extends HTMLElement {
       this.zones.push(this.config.travelling);
     }
 
+    /* Go through the current locations of the wizards to see what else we need to add to the clock */
     for (num = 0; num < this.config.wizards.length; num++){
       if (!this._hass.states[this.config.wizards[num].entity])
         throw new Error("Unable to find state for entity " + this.config.wizards[num].entity);
@@ -48,6 +52,7 @@ class WizardClockCard extends HTMLElement {
           : state.state
         )
         :  "not_home";
+      /* Replace the zone name with the friendly name where possible */
       if (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name)
       {
         stateStr = this._hass.states["zone." + stateStr].attributes.friendly_name;
@@ -58,17 +63,18 @@ class WizardClockCard extends HTMLElement {
           stateStr = state.attributes.locality
         }
 
-	/* Show travelling if not in a zone and we have a velocity */
+	/* Show travelling if not in a zone and we have a velocity > 10 */
 	const stateVelo = state && state.attributes ? (
           state.attributes.velocity ? state.attributes.velocity : (
             state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
-            state.attributes.moving ? 16 : 0
+            state.attributes.moving ? this.travellingMinSpeed + 1 : 0
           ))) : 0; 
-	if (stateVelo > 15) {
+	if (stateVelo > this.travellingMinSpeed) {
           stateStr = this.travellingState;
 	}
       }
-
+	    
+      /* Finally add the cleaned-up location to the list */
       if (this.zones.indexOf(stateStr) == -1 && stateStr != "not_home" && stateStr != this.travellingState && !this.exclude.includes(stateStr))  {
         if (typeof(stateStr)!=="string")
           throw new Error("Unable to add state for entity " + this.config.wizards[num].entity + " of type " + typeof(stateStr) + ".");
@@ -85,11 +91,14 @@ class WizardClockCard extends HTMLElement {
       }
     }
 
+    /* Add some empty slots if min_location_slots is set and we don't have that many yet, this helps to stop the clock jumping around when new locations are added */
     if (this.zones.length < this.min_location_slots) {
       for (num = this.zones.length; num < this.min_location_slots; num++){
         this.zones.push(' ')
       }
     }
+	  
+    /* Set up the canvas to draw the clock in */
     if (!this.canvas) {
       const card = document.createElement('ha-card');
       //card.header = 'Wizard Clock';
@@ -149,6 +158,7 @@ class WizardClockCard extends HTMLElement {
     this.config = config;
     this.currentstate = [];
     this.lostState = config.lost ? config.lost : "Lost";
+    this.travellingMinSpeed = config.min_travelling_speed ? config.min_travelling_speed : 10; // travelling state only used if speed is above this value
     this.travellingState = config.travelling ? config.travelling : "Travelling";
     this.min_location_slots=this.config.min_location_slots ? this.config.min_location_slots : 0;
     this.show_images=this.config.show_images ? (this.config.show_images=="Yes" ? 1 : 0) : 0;
@@ -193,6 +203,7 @@ class WizardClockCard extends HTMLElement {
       }
   }
 
+  /* Draw the frame of the clock */
   drawFace(ctx, radius) {
     ctx.shadowColor = null;
     ctx.shadowBlur = 0;
@@ -209,6 +220,7 @@ class WizardClockCard extends HTMLElement {
     ctx.stroke();
   }
 
+  /* Does what it says on the tin */
   drawHinge(ctx, radius, colour) {
     ctx.beginPath();
     ctx.arc(0, 0, radius*0.05, 0, 2*Math.PI);
@@ -220,6 +232,7 @@ class WizardClockCard extends HTMLElement {
     ctx.fill();
   }
 
+  /* Draw the required location names around the clock. Spaces them out equally and draws the text in a curve to match the clock face. */
   drawNumbers(ctx, radius, locations) {
       /* 
         Text on a curve code modified from function written by James Alford here: http://blog.graphicsgen.com/2015/03/html5-canvas-rounded-text.html
@@ -246,7 +259,7 @@ class WizardClockCard extends HTMLElement {
           var inwardFacing = true;
           var kerning = 0; // can adjust kerning using this - maybe automatically adjust it based on text length? 
 	  /* Switched to using an array to split the text into - this means that unicode characters (i.e. emojis etc.) 
-             are handled correctly */
+             are (for the most part) handled correctly.  */
 	  var textArray = Array.from(locations[num]).reverse();
           // if we're in the bottom half of the clock then reverse the facing of the text so that it's not upside down
           if (ang > Math.PI / 2 && ang < ((Math.PI * 2) - (Math.PI / 2)))
@@ -305,10 +318,12 @@ class WizardClockCard extends HTMLElement {
     return rtlChar.test(text);
   }
 
+  /* Work out where we need to put each wizard, then call the drawHand() function for each of them */
   drawTime(ctx, wizardImages, radius, locations, wizards){
       this.targetstate = [];
       var num;
       for (num = 0; num < wizards.length; num++){
+	/* Get the location of the wizard */
         const state = this._hass.states[wizards[num].entity];
         var stateStr = state && state.state != "off" && state.state != "unknown" ? 
           (state.attributes ? 
@@ -328,25 +343,28 @@ class WizardClockCard extends HTMLElement {
         {
           stateStr = this._hass.states["zone." + stateStr].attributes.friendly_name;
         }
-	
+
+	/* Ignore locations if they're in the exclude list - set the state to lost instead */
         if (this.exclude.includes(stateStr) ||
 	  (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name &&
           this.exclude.includes(this._hass.states["zone." + stateStr].attributes.friendly_name))) {
 
           stateStr = this.lostState;
 	}
+
+	/* Check if they're moving above the min speed */
         const stateVelo = state && state.attributes ? (
           state.attributes.velocity ? state.attributes.velocity : (
             state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
-            state.attributes.moving ? 16 : 0
+            state.attributes.moving ? this.travellingMinSpeed + 1 : 0
           ))) : 0; 
         var locnum;
         var wizardOffset = ((num-((wizards.length-1)/2)) / wizards.length * 0.6);
         var location = wizardOffset; // default
         for (locnum = 0; locnum < locations.length; locnum++){
           if ((locations[locnum].toLowerCase() == stateStr.toLowerCase()) 
-              || (locations[locnum] == this.travellingState && stateVelo > 15)
-              || (locations[locnum] == this.lostState && stateStr == "not_home" && stateVelo <= 15))
+              || (locations[locnum] == this.travellingState && stateVelo > this.travellingMinSpeed)
+              || (locations[locnum] == this.lostState && stateStr == "not_home" && stateVelo <= this.travellingMinSpeed))
           {
             location = locnum + wizardOffset;
             break;
@@ -376,7 +394,9 @@ class WizardClockCard extends HTMLElement {
       }
   }
 
+  /* Actually draw the hand for a wizard */
   drawHand(ctx, pos, length, width, wizard, colour, textcolour, image) {
+    /* Draw the hand itself */
     ctx.beginPath();
     ctx.lineWidth = width;
     if (colour) {
@@ -397,6 +417,7 @@ class WizardClockCard extends HTMLElement {
 
     ctx.fill();
 
+    /* if we have a loaded image, then slap that on the end of the hand */
     if (image && image.src!="" && image.complete){
       ctx.save();
       ctx.beginPath();
@@ -413,6 +434,7 @@ class WizardClockCard extends HTMLElement {
       ctx.restore();
     }
 
+    /* Finally draw the name of the wizard */
     ctx.font = width*this.fontScale + "px " + this.selectedFont;
     if (textcolour) {
       ctx.fillStyle = textcolour;
