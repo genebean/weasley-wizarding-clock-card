@@ -537,6 +537,9 @@ class WizardClockCard extends HTMLElement {
 
   /* Actually draw the hand for a wizard */
   drawHand(ctx, pos, length, width, wizard, colour, textcolour, image) {
+    /* Test flag to move images to the other end of the hand */
+    var imageAtTip = true;
+	  
     /* Draw the hand itself */
     ctx.beginPath();
     ctx.lineWidth = width;
@@ -555,6 +558,13 @@ class WizardClockCard extends HTMLElement {
     ctx.quadraticCurveTo(width*0.2, -length*0.8, 0, -length);
     ctx.quadraticCurveTo(-width*0.2, -length*0.8, -width, -length*0.75);
     ctx.quadraticCurveTo(-width, -length*0.5, 0, 0);
+    if (!imageAtTip) 
+    {
+      ctx.quadraticCurveTo(width*0.2, length*0.2, width*0.2, length*0.3);
+      ctx.quadraticCurveTo(width*0.1, length*0.3, 0, length*0.4);
+      ctx.quadraticCurveTo(-width*0.2, length*0.3, -width, length*0.3);
+      ctx.quadraticCurveTo(-width, length*0.2, 0, 0);
+    }
 
     ctx.fill();
 
@@ -568,10 +578,18 @@ class WizardClockCard extends HTMLElement {
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
       }
       ctx.lineWidth = 2;
-      ctx.arc(0, -length, width, 0, Math.PI * 2, false);
-      ctx.stroke();
-      ctx.clip();
-      ctx.drawImage(image, -width*1.2, -length-(width*1.2), (width*1.2)*2, (width*1.2)*2);
+      if (imageAtTip)
+      {
+        ctx.arc(0, -length, width, 0, Math.PI * 2, false);
+        ctx.stroke();
+        ctx.clip();
+        ctx.drawImage(image, -width*1.2, -length-(width*1.2), (width*1.2)*2, (width*1.2)*2);
+      } else {
+        ctx.arc(0, length*0.3, width, 0, Math.PI * 2, false);
+        ctx.stroke();
+        ctx.clip();
+        ctx.drawImage(image, -width*1.2, (length*0.3)-(width*1.2), (width*1.2)*2, (width*1.2)*2);
+      }
       ctx.restore();
     }
 
