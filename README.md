@@ -71,6 +71,7 @@ Add this repository as a custom repository in HACS:
 * shaft_colour (optional): the colour of the shaft
 * lost (optional): text to display when an entity is lost, defaults to "Lost". 
 * travelling (optional): text to display when an entity is travelling, defaults to "Travelling"
+* min_travelling_speed (optional, defaults to 10): entity must have a velocity above this value to be considered travelling, otherwise it'll detfault to lost.
 * width (optional): set the width (and therefore height, as it is always a circle) of the clock in pixels. Defaults to 500 if not set.
 
 ```
@@ -101,6 +102,7 @@ fontface: >-
 width: 500
 lost: 'In mortal peril'
 travelling: 'Between here and there'
+min_travelling_speed: 10
 ```
 
 
