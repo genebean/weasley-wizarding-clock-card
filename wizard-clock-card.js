@@ -162,7 +162,8 @@ class WizardClockCard extends HTMLElement {
     this.travellingState = config.travelling ? config.travelling : "Travelling";
     this.min_location_slots=this.config.min_location_slots ? this.config.min_location_slots : 0;
     this.show_images=this.config.show_images ? (this.config.show_images=="Yes" ? 1 : 0) : 0;
-	this.wizardImages = [];
+    this.imageAtTip = this.config.draw_image_at_hand_tip ? (this.config.draw_image_at_hand_tip=="Yes" ? true : false) : false;
+    this.wizardImages = [];
     
     if (this.config.shaft_colour){
       this.shaft_colour = this.config.shaft_colour;
@@ -396,9 +397,7 @@ class WizardClockCard extends HTMLElement {
 
   /* Actually draw the hand for a wizard */
   drawHand(ctx, pos, length, width, wizard, colour, textcolour, image) {
-    /* Test flag to move images to the other end of the hand */
-    var imageAtTip = true;
-	  
+
     /* Draw the hand itself */
     ctx.beginPath();
     ctx.lineWidth = width;
@@ -417,12 +416,12 @@ class WizardClockCard extends HTMLElement {
     ctx.quadraticCurveTo(width*0.2, -length*0.8, 0, -length);
     ctx.quadraticCurveTo(-width*0.2, -length*0.8, -width, -length*0.75);
     ctx.quadraticCurveTo(-width, -length*0.5, 0, 0);
-    if (!imageAtTip) 
+    if (!this.imageAtTip) 
     {
-      ctx.quadraticCurveTo(width*0.2, length*0.2, width*0.2, length*0.3);
-      ctx.quadraticCurveTo(width*0.1, length*0.3, 0, length*0.4);
-      ctx.quadraticCurveTo(-width*0.2, length*0.3, -width, length*0.3);
-      ctx.quadraticCurveTo(-width, length*0.2, 0, 0);
+      // extend the hand out the other side to attach an image to
+      ctx.quadraticCurveTo(width*0.4, length*0.1, width*0.6, length*0.4);
+      ctx.lineTo(-width*0.6, length*0.4);
+      ctx.quadraticCurveTo(-width*0.4, length*0.1, 0, 0);
     }
 
     ctx.fill();
@@ -437,17 +436,17 @@ class WizardClockCard extends HTMLElement {
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
       }
       ctx.lineWidth = 2;
-      if (imageAtTip)
+      if (this.imageAtTip)
       {
         ctx.arc(0, -length, width, 0, Math.PI * 2, false);
         ctx.stroke();
         ctx.clip();
         ctx.drawImage(image, -width*1.2, -length-(width*1.2), (width*1.2)*2, (width*1.2)*2);
       } else {
-        ctx.arc(0, length*0.3, width, 0, Math.PI * 2, false);
+        ctx.arc(0, length*0.5, width, 0, Math.PI * 2, false);
         ctx.stroke();
         ctx.clip();
-        ctx.drawImage(image, -width*1.2, (length*0.3)-(width*1.2), (width*1.2)*2, (width*1.2)*2);
+        ctx.drawImage(image, -width*1.2, (length*0.5)-(width*1.2), (width*1.2)*2, (width*1.2)*2);
       }
       ctx.restore();
     }
