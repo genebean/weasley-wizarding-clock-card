@@ -76,13 +76,13 @@ class WizardClockCard extends HTMLElement {
       }
 
       /* Create an image object for each wizard, and assign the URL if we can find one. Images will only be displayed once they have completed loading. */
-	  if (!this.wizardImages[num])
-	  {
+      if (!this.wizardImages[num])
+      {
         var img = new Image();
         if (state && state.attributes && state.attributes.entity_picture)
           img.src = state.attributes.entity_picture;
         this.wizardImages.push(img);
-	  }
+      }
     }
 
     if (this.zones.length < this.min_location_slots) {
@@ -321,6 +321,12 @@ class WizardClockCard extends HTMLElement {
           if (state.attributes.locality) {
             stateStr = state.attributes.locality
           }
+        }
+
+	/* Use the friendly name of the zone if it has one */
+        if (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name)
+        {
+          stateStr = this._hass.states["zone." + stateStr].attributes.friendly_name;
         }
 	
         if (this.exclude.includes(stateStr) ||
