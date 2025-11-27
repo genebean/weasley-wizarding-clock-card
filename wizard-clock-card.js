@@ -72,37 +72,9 @@ class WizardClockCard extends HTMLElement {
 
     /* Go through the current locations of the wizards to see what else we need to add to the clock */
     for (num = 0; num < this.config.wizards.length; num++) {
-      if (!this._hass.states[this.config.wizards[num].entity])
-        throw new Error("Unable to find state for entity " + this.config.wizards[num].entity);
-      const state = this._hass.states[this.config.wizards[num].entity];
-      var stateStr = state && state.state && state.state != "off" && state.state != "unknown" ?
-        (state.attributes ?
-          (state.attributes.message ? state.attributes.message : state.state)
-          : state.state
-        )
-        : "not_home";
-      /* Replace the zone name with the friendly name where possible */
-      if (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name) {
-        stateStr = this._hass.states["zone." + stateStr].attributes.friendly_name;
-      }
-      /* Show locality if not in a zone (if locality is geocoded) */
-      if (stateStr === 'Away') {
-        if (state.attributes.locality) {
-          stateStr = state.attributes.locality
-        }
         var stateStr = this.getWizardState(this.config.wizards[num].entity);
         if (debugLogging) {
           console.log(`${this.config.header ? "(" + this.config.header + ") " : ""}(${this.config.wizards[num].name}) set hass stateStr: ${stateStr}`);
-
-          /* Show travelling if not in a zone and we have a velocity > 10 */
-          const stateVelo = state && state.attributes ? (
-            state.attributes.velocity ? state.attributes.velocity : (
-              state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
-                state.attributes.moving ? this.travellingMinSpeed + 1 : 0
-              ))) : 0;
-          if (stateVelo > this.travellingMinSpeed) {
-            stateStr = this.travellingState;
-          }
         }
 
         /* Finally add the cleaned-up location to the list */
@@ -127,43 +99,6 @@ class WizardClockCard extends HTMLElement {
           this.zones.push(' ')
         }
       }
-
-      /* Set up the canvas to draw the clock in */
-      if (!this.canvas) {
-        const card = document.createElement('ha-card');
-        //card.header = 'Wizard Clock';
-        var fontstyle = document.createElement('style');
-        if (this.config.fontface) {
-          fontstyle.innerText = "@font-face { " + this.config.fontface + " }  ";
-        } else {
-          // my default
-          fontstyle.innerText = "@font-face {    font-family: itcblkad_font;    src: local(itcblkad_font), url('/local/ITCBLKAD.TTF') format('opentype');}  ";
-        }
-        document.body.appendChild(fontstyle);
-
-        this.div = document.createElement('div');
-        this.div.style.textAlign = 'center';
-        this.canvas = document.createElement('canvas');
-        this.div.appendChild(this.canvas);
-        card.appendChild(this.div);
-        this.appendChild(card);
-        this.ctx = this.canvas.getContext("2d");
-      }
-
-      this.canvas.style.maxWidth = "-webkit-fill-available";
-      this.canvas.width = this.config.width ? this.config.width : "500";
-      this.canvas.height = this.config.width ? this.config.width : "500";
-
-      this.radius = this.canvas.height / 2;
-      this.ctx.translate(this.radius, this.radius);
-      this.radius = this.radius * 0.90;
-
-      if (this.config.fontName) {
-        this.selectedFont = this.config.fontName;
-      } else {
-        this.selectedFont = "itcblkad_font";
-      }
-      this.fontScale = 1.1;
 
       var obj = this;
       this.lastframe = requestAnimationFrame(function () {
@@ -269,13 +204,14 @@ class WizardClockCard extends HTMLElement {
         console.log(`${this.config.header ? "(" + this.config.header + ") " : ""}Wizard ${entity} does not exist.`);
         return this.lostState;
       }
+
       const stateVelo = state && state.attributes ? (
         state.attributes.velocity ? state.attributes.velocity : (
-          state.attributes.speed ? state.attributes.speed : (
-            state.attributes.moving ? 16 : 0
+          state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
+            state.attributes.moving ? this.travellingMinSpeed + 1 : 0
           ))) : 0;
 
-      /* Prioritize stateStr: 1. message attribute, 2. zone attribute, 3. state */
+          /* Prioritize stateStr: 1. message attribute, 2. zone attribute, 3. state */
       var stateStr = "not_home";
       if (state && state.state && state.state !== "off" && state.state !== "unknown") {
         /* Keep the not-so-binary states from person_location integration */
@@ -465,37 +401,8 @@ class WizardClockCard extends HTMLElement {
       for (num = 0; num < wizards.length; num++) {
         /* Get the location of the wizard */
         const state = this._hass.states[wizards[num].entity];
-        var stateStr = state && state.state != "off" && state.state != "unknown" ?
-          (state.attributes ?
-            (state.attributes.message ? state.attributes.message : state.state)
-            : state.state
-          )
-          : this.lostState;
-        /* Point to locality if not in a zone (if locality is geocoded) */
-        if (stateStr === 'Away') {
-          if (state.attributes.locality) {
-            stateStr = state.attributes.locality
-          }
-        }
-
-        /* Use the friendly name of the zone if it has one */
-        if (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name) {
-          stateStr = this._hass.states["zone." + stateStr].attributes.friendly_name;
-        }
-
-        /* Ignore locations if they're in the exclude list - set the state to lost instead */
-        if (this.exclude.includes(stateStr) ||
-          (this._hass.states["zone." + stateStr] && this._hass.states["zone." + stateStr].attributes && this._hass.states["zone." + stateStr].attributes.friendly_name &&
-            this.exclude.includes(this._hass.states["zone." + stateStr].attributes.friendly_name))) {
-
-          stateStr = this.lostState;
-        }
-        // Check both velocity and proximity for movement
-        const stateVelo = state && state.attributes ? (
-          state.attributes.velocity ? state.attributes.velocity : (
-            state.attributes.source && this._hass.states[state.attributes.source] && this._hass.states[state.attributes.source].attributes && this._hass.states[state.attributes.source].attributes.speed ? this._hass.states[state.attributes.source].attributes.speed : (
-              state.attributes.moving ? this.travellingMinSpeed + 1 : 0
-            ))) : 0;
+        var stateStr = this.getWizardState(wizards[num].entity);
+        
         var locnum;
         var wizardOffset = ((num - ((wizards.length - 1) / 2)) / wizards.length * 0.6);
         var location = wizardOffset; // default
