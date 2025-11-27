@@ -129,6 +129,8 @@ class WizardClockCard extends HTMLElement {
         this.zones.push(' ')
       }
     }
+	  
+    /* Set up the canvas to draw the clock in */
     if (!this.canvas) {
       const card = document.createElement('ha-card');
       //card.header = 'Wizard Clock';
