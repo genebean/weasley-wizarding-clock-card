@@ -44,7 +44,7 @@ class WizardClockCard extends HTMLElement {
 
     /* First we need to build the list of locations that need to be displayed on the clock - start with those defined in the config */
     var num;
-    if (this.config.locations) {
+    if (this.config ? this.config.locations) {
       for (num = 0; num < this.config.locations.length; num++) {
         if (this.zones.indexOf(this.config.locations[num]) == -1) {
           this.zones.push(this.config.locations[num]);
@@ -52,7 +52,7 @@ class WizardClockCard extends HTMLElement {
       }
     }
     /* de-duplicate the list of exclusions */
-    if (this.config.exclude) {
+    if (this.config ? this.config.exclude) {
       for (num = 0; num < this.config.exclude.length; num++) {
         if (this.exclude.indexOf(this.config.exclude[num]) == -1) {
           this.exclude.push(this.config.exclude[num]);
@@ -60,17 +60,18 @@ class WizardClockCard extends HTMLElement {
       }
     }
     /* If the lost and travelling config is defined then add this too */
-    if (this.config.lost) {
+    if (this.config ? this.config.lost) {
       this.zones.push(this.config.lost);
     }
-    if (this.config.travelling) {
+    if (this.config ? this.config.travelling) {
       this.zones.push(this.config.travelling);
     }
-    if (this.config.lost) {
+    if (this.config ? this.config.lost) {
       this.zones.push(this.lostState);
     }
 
     /* Go through the current locations of the wizards to see what else we need to add to the clock */
+    if (this.config ? this.config.wizards) {
     for (num = 0; num < this.config.wizards.length; num++) {
         var stateStr = this.getWizardState(this.config.wizards[num].entity);
         if (debugLogging) {
@@ -91,6 +92,7 @@ class WizardClockCard extends HTMLElement {
             img.src = state.attributes.entity_picture;
           this.wizardImages.push(img);
         }
+      }
       }
 
       /* Add some empty slots if min_location_slots is set and we don't have that many yet, this helps to stop the clock jumping around when new locations are added */
