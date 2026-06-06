@@ -2,7 +2,12 @@ import { LitElement, html, css, PropertyValues } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { HomeAssistant } from 'custom-card-helpers';
 
-const CARDNAME = 'wizard-clock-card';
+// Injected at build time via esbuild --define. Do not assign here or esbuild
+// will inline the literal and --define will have no effect.
+//   Production: --define:CARDNAME='"wizard-clock-card"'
+//   Dev:        --define:CARDNAME='"wizard-clock-card-dev"'
+declare const CARDNAME: string;
+
 const VERSION = '0.9.0';
 
 const DEBUG = false;

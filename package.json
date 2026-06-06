@@ -4,8 +4,10 @@
   "description": "Harry Potter-style location clock for Home Assistant Lovelace",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/wizard-clock-card.ts --bundle --format=esm --outfile=wizard-clock-card.js",
-    "watch": "esbuild src/wizard-clock-card.ts --bundle --format=esm --outfile=wizard-clock-card.js --watch"
+    "build": "esbuild src/wizard-clock-card.ts --bundle --format=esm --define:CARDNAME='\"wizard-clock-card\"' --outfile=wizard-clock-card.js",
+    "build:dev": "esbuild src/wizard-clock-card.ts --bundle --format=esm --define:CARDNAME='\"wizard-clock-card-dev\"' --outfile=wizard-clock-card-dev.js",
+    "watch": "esbuild src/wizard-clock-card.ts --bundle --format=esm --define:CARDNAME='\"wizard-clock-card\"' --outfile=wizard-clock-card.js --watch",
+    "watch:dev": "esbuild src/wizard-clock-card.ts --bundle --format=esm --define:CARDNAME='\"wizard-clock-card-dev\"' --outfile=wizard-clock-card-dev.js --watch"
   },
   "dependencies": {
     "lit": "^3.0.0"

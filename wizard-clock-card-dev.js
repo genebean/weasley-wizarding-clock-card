@@ -672,7 +672,7 @@ var WizardClockCard = class extends i4 {
     console.info(
       "%c %s %c %s",
       "color: white; background: forestgreen; font-weight: 700;",
-      "wizard-clock-card".toUpperCase(),
+      "wizard-clock-card-dev".toUpperCase(),
       "color: forestgreen; background: white; font-weight: 700;",
       VERSION
     );
@@ -719,7 +719,7 @@ var WizardClockCard = class extends i4 {
   // Safe to query elements and set up observers here.
   firstUpdated() {
     const ctx = this._canvas.getContext("2d");
-    if (!ctx) throw new Error(`Browser does not support ${"wizard-clock-card"} canvas.`);
+    if (!ctx) throw new Error(`Browser does not support ${"wizard-clock-card-dev"} canvas.`);
     this._ctx = ctx;
     this._resizeObserver = new ResizeObserver(() => {
       clearTimeout(this._resizeTimeout);
@@ -1073,7 +1073,7 @@ __decorateClass([
   e5("canvas")
 ], WizardClockCard.prototype, "_canvas", 2);
 WizardClockCard = __decorateClass([
-  t3("wizard-clock-card")
+  t3("wizard-clock-card-dev")
 ], WizardClockCard);
 /*! Bundled license information:
 
