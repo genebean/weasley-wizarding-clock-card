@@ -12,6 +12,12 @@ const VERSION = '0.9.0';
 
 const DEBUG = false;
 
+const FONT_SCALE = 1.1;
+
+// Tracks @font-face strings already injected into the document so repeated
+// setConfig() calls (e.g. while editing YAML) don't append duplicate rules.
+const _injectedFontFaces = new Set<string>();
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface WizardConfig {
@@ -115,9 +121,13 @@ class WizardClockCard extends LitElement {
   private _travellingState = 'Travelling';
   private _minLocationSlots = 0;
   private _selectedFont = 'Palatino Linotype, Palatino, Book Antiqua, serif';
-  private _fontScale = 1.1;
   private _shaftColour = '';
   private _exclude: string[] = [];
+
+  // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
+  // Avoids measureText() calls on every animation frame in _drawNumbers().
+  private _charWidthCache: Map<string, number> = new Map();
+  private _textHeight = 0;
 
   // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -187,9 +197,12 @@ class WizardClockCard extends LitElement {
 
     // @font-face rules must be injected into the document (not the shadow root)
     // so the browser's font registry picks them up for canvas text rendering.
-    if (this._config.fontface) {
+    // Guard with a module-level Set so repeated setConfig() calls (e.g. while
+    // editing YAML) don't append duplicate rules to document.body.
+    if (this._config.fontface && !_injectedFontFaces.has(this._config.fontface)) {
+      _injectedFontFaces.add(this._config.fontface);
       const style = document.createElement('style');
-      style.innerText = `@font-face { ${this._config.fontface} }`;
+      style.textContent = `@font-face { ${this._config.fontface} }`;
       document.body.appendChild(style);
     }
   }
@@ -207,7 +220,7 @@ class WizardClockCard extends LitElement {
   getGridOptions() {
     return {
       columns:     12,
-      rows:        8,
+      rows:        7,
       min_columns: 2,
       min_rows:    2,
     };
@@ -363,6 +376,39 @@ class WizardClockCard extends LitElement {
       this._zones.push(' ');
     }
 
+    // Compute target hand positions once per state update so _drawTime() does
+    // not allocate new objects on every animation frame.
+    this._targetstate = this._buildTargetState();
+
+    // Sync non-animated hand properties (length, width, colours) to currentstate
+    // so a canvas resize immediately redraws hands at the correct new dimensions.
+    for (let i = 0; i < this._targetstate.length; i++) {
+      if (this._currentstate[i]) {
+        const t = this._targetstate[i];
+        this._currentstate[i].length     = t.length;
+        this._currentstate[i].width      = t.width;
+        this._currentstate[i].wizard     = t.wizard;
+        this._currentstate[i].colour     = t.colour;
+        this._currentstate[i].textcolour = t.textcolour;
+      }
+    }
+
+    // Pre-measure all character widths at the label font size so _drawNumbers()
+    // can look them up from a Map instead of calling measureText() each frame.
+    this._ctx.save();
+    this._ctx.font = `${this._radius * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const m = this._ctx.measureText('Mg');
+    this._textHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+    this._charWidthCache.clear();
+    for (const zone of this._zones) {
+      for (const char of zone) {
+        if (!this._charWidthCache.has(char)) {
+          this._charWidthCache.set(char, this._ctx.measureText(char).width);
+        }
+      }
+    }
+    this._ctx.restore();
+
     if (this._lastframe) {
       cancelAnimationFrame(this._lastframe);
       this._lastframe = 0;
@@ -496,16 +542,13 @@ class WizardClockCard extends LitElement {
   }
 
   private _drawNumbers(): void {
-    const ctx = this._ctx!;
-    const r   = this._radius;
-    ctx.font         = `${r * 0.15 * this._fontScale}px ${this._selectedFont}`;
+    const ctx        = this._ctx!;
+    const r          = this._radius;
+    const textHeight = this._textHeight; // pre-measured in _updateAndDraw()
+    ctx.font         = `${r * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
     ctx.textBaseline = 'middle';
     ctx.textAlign    = 'center';
     ctx.fillStyle    = this._colours.primaryText;
-
-    // Measure font height via canvas metrics rather than forcing a DOM reflow.
-    const m          = ctx.measureText('Mg');
-    const textHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
 
     for (let num = 0; num < this._zones.length; num++) {
       ctx.save();
@@ -528,14 +571,15 @@ class WizardClockCard extends LitElement {
       if (this._isRtlLanguage(text)) text = text.split('').reverse().join('');
 
       // Pre-rotate 50% of total arc so the text is centre-aligned on the spoke.
+      // Character widths were pre-measured in _updateAndDraw(); look up from cache.
       for (let j = 0; j < text.length; j++) {
-        const charWid = ctx.measureText(text[j]).width;
+        const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         startAngle += ((charWid + (j === text.length - 1 ? 0 : kerning)) / (r - textHeight)) / 2;
       }
       ctx.rotate(startAngle);
 
       for (let j = 0; j < text.length; j++) {
-        const charWid = ctx.measureText(text[j]).width;
+        const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         ctx.rotate((charWid / 2) / (r - textHeight) * -1);
         ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r + textHeight));
         ctx.rotate((charWid / 2 + kerning) / (r - textHeight) * -1);
@@ -545,34 +589,9 @@ class WizardClockCard extends LitElement {
     }
   }
 
+  // _targetstate is computed once in _updateAndDraw() when entity state or
+  // config changes. Here we only interpolate and draw — no per-frame allocations.
   private _drawTime(): void {
-    this._targetstate = [];
-
-    for (let num = 0; num < this._config.wizards.length; num++) {
-      const wizard      = this._config.wizards[num];
-      const stateStr    = this._wizardStates[wizard.entity] ?? this._lostState;
-      const wizardOffset = ((num - (this._config.wizards.length - 1) / 2) / this._config.wizards.length) * 0.3;
-      let location      = wizardOffset;
-
-      for (let locnum = 0; locnum < this._zones.length; locnum++) {
-        if (this._zones[locnum].toLowerCase() === stateStr.toLowerCase()) {
-          location = locnum + wizardOffset;
-          break;
-        }
-      }
-
-      const pos = location * Math.PI / this._zones.length * 2;
-      this._targetstate.push({
-        pos,
-        length:    this._radius * 0.7,
-        width:     this._radius * 0.1,
-        wizard:    wizard.name,
-        colour:    wizard.colour,
-        textcolour: wizard.textcolour,
-      });
-    }
-
-    // Interpolate currentstate toward targetstate (smooth hand movement).
     for (let num = 0; num < this._config.wizards.length; num++) {
       if (this._currentstate[num]) {
         this._currentstate[num].pos +=
@@ -582,10 +601,36 @@ class WizardClockCard extends LitElement {
         this._currentstate.push({ ...this._targetstate[num], pos: 0 });
       }
     }
-
     for (const hand of this._currentstate) {
       this._drawHand(hand);
     }
+  }
+
+  private _buildTargetState(): HandState[] {
+    const targets: HandState[] = [];
+    for (let num = 0; num < this._config.wizards.length; num++) {
+      const wizard       = this._config.wizards[num];
+      const stateStr     = this._wizardStates[wizard.entity] ?? this._lostState;
+      const wizardOffset = ((num - (this._config.wizards.length - 1) / 2) / this._config.wizards.length) * 0.3;
+      let location       = wizardOffset;
+
+      for (let locnum = 0; locnum < this._zones.length; locnum++) {
+        if (this._zones[locnum].toLowerCase() === stateStr.toLowerCase()) {
+          location = locnum + wizardOffset;
+          break;
+        }
+      }
+
+      targets.push({
+        pos:        location * Math.PI / this._zones.length * 2,
+        length:     this._radius * 0.7,
+        width:      this._radius * 0.1,
+        wizard:     wizard.name,
+        colour:     wizard.colour,
+        textcolour: wizard.textcolour,
+      });
+    }
+    return targets;
   }
 
   private _drawHand(hand: HandState): void {
@@ -606,7 +651,7 @@ class WizardClockCard extends LitElement {
     ctx.quadraticCurveTo(-hand.width,       -hand.length * 0.5,  0,            0);
     ctx.fill();
 
-    ctx.font      = `${hand.width * this._fontScale}px ${this._selectedFont}`;
+    ctx.font      = `${hand.width * FONT_SCALE}px ${this._selectedFont}`;
     ctx.fillStyle = hand.textcolour ?? this._colours.primaryText;
     ctx.translate(0, -hand.length / 2);
     ctx.rotate(Math.PI / 2);

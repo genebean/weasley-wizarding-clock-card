@@ -631,6 +631,8 @@ function e5(e6, r6) {
 // src/wizard-clock-card.ts
 var VERSION = "0.9.0";
 var DEBUG = false;
+var FONT_SCALE = 1.1;
+var _injectedFontFaces = /* @__PURE__ */ new Set();
 var WizardClockCard = class extends i4 {
   constructor() {
     super(...arguments);
@@ -662,9 +664,12 @@ var WizardClockCard = class extends i4 {
     this._travellingState = "Travelling";
     this._minLocationSlots = 0;
     this._selectedFont = "Palatino Linotype, Palatino, Book Antiqua, serif";
-    this._fontScale = 1.1;
     this._shaftColour = "";
     this._exclude = [];
+    // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
+    // Avoids measureText() calls on every animation frame in _drawNumbers().
+    this._charWidthCache = /* @__PURE__ */ new Map();
+    this._textHeight = 0;
   }
   // ── HA lifecycle ─────────────────────────────────────────────────────────────
   // Called by HA before the element is connected. Throw to show an error card.
@@ -685,9 +690,10 @@ var WizardClockCard = class extends i4 {
     this._shaftColour = this._config.shaft_colour ?? "";
     this._exclude = [...this._config.exclude ?? []];
     this._trackedEntities = this._buildTrackedEntityList();
-    if (this._config.fontface) {
+    if (this._config.fontface && !_injectedFontFaces.has(this._config.fontface)) {
+      _injectedFontFaces.add(this._config.fontface);
       const style = document.createElement("style");
-      style.innerText = `@font-face { ${this._config.fontface} }`;
+      style.textContent = `@font-face { ${this._config.fontface} }`;
       document.body.appendChild(style);
     }
   }
@@ -703,7 +709,7 @@ var WizardClockCard = class extends i4 {
   getGridOptions() {
     return {
       columns: 12,
-      rows: 8,
+      rows: 7,
       min_columns: 2,
       min_rows: 2
     };
@@ -813,6 +819,30 @@ var WizardClockCard = class extends i4 {
     while (this._zones.length < this._minLocationSlots) {
       this._zones.push(" ");
     }
+    this._targetstate = this._buildTargetState();
+    for (let i5 = 0; i5 < this._targetstate.length; i5++) {
+      if (this._currentstate[i5]) {
+        const t4 = this._targetstate[i5];
+        this._currentstate[i5].length = t4.length;
+        this._currentstate[i5].width = t4.width;
+        this._currentstate[i5].wizard = t4.wizard;
+        this._currentstate[i5].colour = t4.colour;
+        this._currentstate[i5].textcolour = t4.textcolour;
+      }
+    }
+    this._ctx.save();
+    this._ctx.font = `${this._radius * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const m2 = this._ctx.measureText("Mg");
+    this._textHeight = m2.actualBoundingBoxAscent + m2.actualBoundingBoxDescent;
+    this._charWidthCache.clear();
+    for (const zone of this._zones) {
+      for (const char of zone) {
+        if (!this._charWidthCache.has(char)) {
+          this._charWidthCache.set(char, this._ctx.measureText(char).width);
+        }
+      }
+    }
+    this._ctx.restore();
     if (this._lastframe) {
       cancelAnimationFrame(this._lastframe);
       this._lastframe = 0;
@@ -914,12 +944,11 @@ var WizardClockCard = class extends i4 {
   _drawNumbers() {
     const ctx = this._ctx;
     const r6 = this._radius;
-    ctx.font = `${r6 * 0.15 * this._fontScale}px ${this._selectedFont}`;
+    const textHeight = this._textHeight;
+    ctx.font = `${r6 * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
     ctx.fillStyle = this._colours.primaryText;
-    const m2 = ctx.measureText("Mg");
-    const textHeight = m2.actualBoundingBoxAscent + m2.actualBoundingBoxDescent;
     for (let num = 0; num < this._zones.length; num++) {
       ctx.save();
       const ang = num * Math.PI / this._zones.length * 2;
@@ -935,12 +964,12 @@ var WizardClockCard = class extends i4 {
       }
       if (this._isRtlLanguage(text)) text = text.split("").reverse().join("");
       for (let j = 0; j < text.length; j++) {
-        const charWid = ctx.measureText(text[j]).width;
+        const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         startAngle += (charWid + (j === text.length - 1 ? 0 : kerning)) / (r6 - textHeight) / 2;
       }
       ctx.rotate(startAngle);
       for (let j = 0; j < text.length; j++) {
-        const charWid = ctx.measureText(text[j]).width;
+        const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
         ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + textHeight));
         ctx.rotate((charWid / 2 + kerning) / (r6 - textHeight) * -1);
@@ -948,8 +977,22 @@ var WizardClockCard = class extends i4 {
       ctx.restore();
     }
   }
+  // _targetstate is computed once in _updateAndDraw() when entity state or
+  // config changes. Here we only interpolate and draw — no per-frame allocations.
   _drawTime() {
-    this._targetstate = [];
+    for (let num = 0; num < this._config.wizards.length; num++) {
+      if (this._currentstate[num]) {
+        this._currentstate[num].pos += (this._targetstate[num].pos - this._currentstate[num].pos) / 60;
+      } else {
+        this._currentstate.push({ ...this._targetstate[num], pos: 0 });
+      }
+    }
+    for (const hand of this._currentstate) {
+      this._drawHand(hand);
+    }
+  }
+  _buildTargetState() {
+    const targets = [];
     for (let num = 0; num < this._config.wizards.length; num++) {
       const wizard = this._config.wizards[num];
       const stateStr = this._wizardStates[wizard.entity] ?? this._lostState;
@@ -961,9 +1004,8 @@ var WizardClockCard = class extends i4 {
           break;
         }
       }
-      const pos = location * Math.PI / this._zones.length * 2;
-      this._targetstate.push({
-        pos,
+      targets.push({
+        pos: location * Math.PI / this._zones.length * 2,
         length: this._radius * 0.7,
         width: this._radius * 0.1,
         wizard: wizard.name,
@@ -971,16 +1013,7 @@ var WizardClockCard = class extends i4 {
         textcolour: wizard.textcolour
       });
     }
-    for (let num = 0; num < this._config.wizards.length; num++) {
-      if (this._currentstate[num]) {
-        this._currentstate[num].pos += (this._targetstate[num].pos - this._currentstate[num].pos) / 60;
-      } else {
-        this._currentstate.push({ ...this._targetstate[num], pos: 0 });
-      }
-    }
-    for (const hand of this._currentstate) {
-      this._drawHand(hand);
-    }
+    return targets;
   }
   _drawHand(hand) {
     const ctx = this._ctx;
@@ -999,7 +1032,7 @@ var WizardClockCard = class extends i4 {
     ctx.quadraticCurveTo(-hand.width * 0.2, -hand.length * 0.8, -hand.width, -hand.length * 0.75);
     ctx.quadraticCurveTo(-hand.width, -hand.length * 0.5, 0, 0);
     ctx.fill();
-    ctx.font = `${hand.width * this._fontScale}px ${this._selectedFont}`;
+    ctx.font = `${hand.width * FONT_SCALE}px ${this._selectedFont}`;
     ctx.fillStyle = hand.textcolour ?? this._colours.primaryText;
     ctx.translate(0, -hand.length / 2);
     ctx.rotate(Math.PI / 2);
