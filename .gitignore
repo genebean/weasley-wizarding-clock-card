@@ -1,0 +1,10 @@
+node_modules/
+
+# Claude Code personal settings (permissions, MCP config) — not for public repos
+.claude/
+!.claude/skills/
+!.claude/skills/**
+.mcp.json
+
+# Nix
+result

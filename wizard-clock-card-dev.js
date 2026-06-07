@@ -768,8 +768,8 @@ var init_wizard_clock_card_editor = __esm({
     WIZARD_SCHEMA = [
       { name: "entity", selector: { entity: { filter: { domain: ["person", "device_tracker", "calendar"] } } } },
       { name: "name", selector: { text: {} } },
-      { name: "colour", selector: { text: {} } },
-      { name: "textcolour", selector: { text: {} } },
+      { name: "colour", selector: { ui_color: {} } },
+      { name: "textcolour", selector: { ui_color: {} } },
       { name: "proximity_sensor", selector: { entity: { filter: { integration: "proximity" } } } }
     ];
     WIZARD_LABELS = {
@@ -781,8 +781,6 @@ var init_wizard_clock_card_editor = __esm({
     };
     WIZARD_HELPERS = {
       name: "Short name shown on the clock hand",
-      colour: "Hex colour, e.g. #4A90E2",
-      textcolour: "Hex colour, e.g. #FFFFFF",
       proximity_sensor: "Optional \u2014 direction-of-travel sensor from the Proximity integration"
     };
     ZONE_ENTITY_SELECTOR = {
@@ -793,7 +791,10 @@ var init_wizard_clock_card_editor = __esm({
       { name: "lost", selector: { text: {} } },
       { name: "travelling", selector: { text: {} } },
       { name: "min_location_slots", selector: { number: { min: 1, max: 20, mode: "box" } } },
-      { name: "shaft_colour", selector: { text: {} } },
+      { name: "face_colour", selector: { ui_color: {} } },
+      { name: "location_colour", selector: { ui_color: {} } },
+      { name: "border_colour", selector: { ui_color: {} } },
+      { name: "shaft_colour", selector: { ui_color: {} } },
       { name: "fontName", selector: { text: {} } },
       { name: "fontface", selector: { text: { multiline: true } } }
     ];
@@ -803,18 +804,21 @@ var init_wizard_clock_card_editor = __esm({
       lost: 'Label for "Lost"',
       travelling: 'Label for "Travelling"',
       min_location_slots: "Minimum location slots",
+      face_colour: "Clock face colour",
+      location_colour: "Location text colour",
+      border_colour: "Border colour",
       shaft_colour: "Shaft colour",
       fontName: "Font name",
       fontface: "@font-face CSS"
     };
     ADVANCED_HELPERS = {
-      shaft_colour: "Hex colour for clock hand shafts",
       fontName: 'CSS font-family value, e.g. "Harry P"',
       fontface: "Expert use only \u2014 raw @font-face CSS block"
     };
     WizardClockCardEditor = class extends i4 {
       constructor() {
         super(...arguments);
+        this._wizardsExpanded = true;
         // ── computeLabel / computeHelper (class-property arrow fns avoid rebind) ────
         this._computeWizardLabel = (schema) => WIZARD_LABELS[schema.name] ?? schema.name;
         this._computeWizardHelper = (schema) => WIZARD_HELPERS[schema.name] ?? "";
@@ -887,11 +891,31 @@ var init_wizard_clock_card_editor = __esm({
         else cfg.locations = locations;
         this._fire(cfg);
       }
+      // ── Migration banner handlers ────────────────────────────────────────────────
+      // Shaft colour default changed to #1a1a1a. These handlers let the user lock in
+      // their preference so the banner only appears until they decide.
+      _migrateShaftToTheme() {
+        const primary = getComputedStyle(this).getPropertyValue("--primary-color").trim();
+        this._fire({ ...this._config, shaft_colour: primary || "#6750A4" });
+      }
+      _migrateShaftToDark() {
+        this._fire({ ...this._config, shaft_colour: "#1a1a1a" });
+      }
       // ── Advanced helper ──────────────────────────────────────────────────────────
       _advancedChanged(e6) {
         const data = e6.detail.value;
         const cfg = { ...this._config, ...data };
-        for (const k2 of ["header", "lost", "travelling", "shaft_colour", "fontName", "fontface"]) {
+        for (const k2 of [
+          "header",
+          "lost",
+          "travelling",
+          "shaft_colour",
+          "face_colour",
+          "location_colour",
+          "border_colour",
+          "fontName",
+          "fontface"
+        ]) {
           if (!cfg[k2]) delete cfg[k2];
         }
         if (cfg.min_location_slots == null) delete cfg.min_location_slots;
@@ -903,37 +927,43 @@ var init_wizard_clock_card_editor = __esm({
         const wizardData = {
           entity: w2.entity || null,
           name: w2.name,
-          colour: w2.colour ?? "",
-          textcolour: w2.textcolour ?? "",
+          colour: w2.colour ?? null,
+          textcolour: w2.textcolour ?? null,
           proximity_sensor: w2.proximity_sensor || null
         };
         return b2`
-      <div class="wizard-card">
-        <div class="wizard-header">
-          <span class="wizard-title">${w2.name || w2.entity || `Wizard ${i5 + 1}`}</span>
-          <ha-icon-button
-            .label=${"Remove wizard"}
-            @click=${() => this._removeWizard(i5)}
-          >
-            <ha-icon icon="mdi:delete"></ha-icon>
-          </ha-icon-button>
+      <ha-expansion-panel outlined
+        @expanded-changed=${(e6) => e6.stopPropagation()}
+      >
+        <span slot="header">${w2.name || w2.entity || `Wizard ${i5 + 1}`}</span>
+        <ha-icon-button
+          slot="icons"
+          .label=${"Remove wizard"}
+          @click=${(e6) => {
+          e6.preventDefault();
+          this._removeWizard(i5);
+        }}
+        >
+          <ha-icon icon="mdi:delete"></ha-icon>
+        </ha-icon-button>
+        <div class="content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${wizardData}
+            .schema=${WIZARD_SCHEMA}
+            .computeLabel=${this._computeWizardLabel}
+            .computeHelper=${this._computeWizardHelper}
+            @value-changed=${(e6) => this._wizardFormChanged(i5, e6.detail.value)}
+          ></ha-form>
+          ${!proxOk ? b2`
+            <ha-alert alert-type="warning">
+              This entity doesn't look like a direction-of-travel sensor.
+              Expected <code>device_class: enum</code> with
+              <code>towards</code> and <code>away_from</code> options.
+            </ha-alert>
+          ` : A}
         </div>
-        <ha-form
-          .hass=${this.hass}
-          .data=${wizardData}
-          .schema=${WIZARD_SCHEMA}
-          .computeLabel=${this._computeWizardLabel}
-          .computeHelper=${this._computeWizardHelper}
-          @value-changed=${(e6) => this._wizardFormChanged(i5, e6.detail.value)}
-        ></ha-form>
-        ${!proxOk ? b2`
-          <ha-alert alert-type="warning">
-            This entity doesn't look like a direction-of-travel sensor.
-            Expected <code>device_class: enum</code> with
-            <code>towards</code> and <code>away_from</code> options.
-          </ha-alert>
-        ` : A}
-      </div>
+      </ha-expansion-panel>
     `;
       }
       render() {
@@ -944,48 +974,83 @@ var init_wizard_clock_card_editor = __esm({
           lost: this._config.lost,
           travelling: this._config.travelling,
           min_location_slots: this._config.min_location_slots ?? null,
-          shaft_colour: this._config.shaft_colour,
+          face_colour: this._config.face_colour ?? null,
+          location_colour: this._config.location_colour ?? null,
+          border_colour: this._config.border_colour ?? null,
+          shaft_colour: this._config.shaft_colour ?? null,
           fontName: this._config.fontName,
           fontface: this._config.fontface
         };
         return b2`
       <div class="card-config">
 
-        <!-- ── Wizards ── -->
-        <div class="section-header">Wizards</div>
-        ${(this._config.wizards ?? []).map((w2, i5) => this._renderWizard(w2, i5))}
-        <ha-button @click=${this._addWizard}>Add wizard</ha-button>
-
-        <!-- ── Locations ── -->
-        <div class="section-header">Locations</div>
-        <p class="hint">
-          Select zones to display on the clock face.
-          The zone's name becomes the location label.
-        </p>
-
-        ${locations.length > 0 ? b2`
-          <div class="location-list">
-            ${locations.map((loc, i5) => b2`
-              <div class="location-chip">
-                <span>${loc}</span>
-                <ha-icon-button
-                  .label=${"Remove"}
-                  @click=${() => this._removeLocation(i5)}
-                >
-                  <ha-icon icon="mdi:close"></ha-icon>
-                </ha-icon-button>
-              </div>
-            `)}
-          </div>
+        <!-- ── Migration banner: shaft_colour default changed ── -->
+        ${!this._config.shaft_colour ? b2`
+          <ha-alert alert-type="info" title="Default hand colour changed">
+            Hand and hinge colour now defaults to dark (<code>#1a1a1a</code>),
+            matching the classic clock look. Previously it used your theme's
+            primary colour. Choose how to proceed:
+            <div class="migration-actions">
+              <ha-button @click=${this._migrateShaftToTheme}>
+                Restore theme colour
+              </ha-button>
+              <ha-button @click=${this._migrateShaftToDark}>
+                Keep dark default
+              </ha-button>
+            </div>
+          </ha-alert>
         ` : A}
 
-        <ha-selector
-          .hass=${this.hass}
-          .selector=${ZONE_ENTITY_SELECTOR}
-          .value=${null}
-          placeholder="Add location from zone…"
-          @value-changed=${this._addLocationFromZone}
-        ></ha-selector>
+        <!-- ── Wizards ── -->
+        <ha-expansion-panel outlined
+          .expanded=${this._wizardsExpanded}
+          @expanded-changed=${(e6) => {
+          this._wizardsExpanded = e6.detail.expanded;
+        }}
+        >
+          <ha-icon slot="leading-icon" icon="mdi:account-group"></ha-icon>
+          <h3 slot="header">Wizards</h3>
+          <div class="content">
+            <div class="wizards-list">
+              ${(this._config.wizards ?? []).map((w2, i5) => this._renderWizard(w2, i5))}
+            </div>
+            <ha-button @click=${this._addWizard}>Add wizard</ha-button>
+          </div>
+        </ha-expansion-panel>
+
+        <!-- ── Locations ── -->
+        <ha-expansion-panel outlined>
+          <ha-icon slot="leading-icon" icon="mdi:map-marker-multiple"></ha-icon>
+          <h3 slot="header">Locations</h3>
+          <div class="content">
+            <p class="hint" style="margin: 0 0 8px;">
+              Select zones to display on the clock face.
+              The zone's name becomes the location label.
+            </p>
+            ${locations.length > 0 ? b2`
+              <div class="location-list">
+                ${locations.map((loc, i5) => b2`
+                  <div class="location-chip">
+                    <span>${loc}</span>
+                    <ha-icon-button
+                      .label=${"Remove"}
+                      @click=${() => this._removeLocation(i5)}
+                    >
+                      <ha-icon icon="mdi:close"></ha-icon>
+                    </ha-icon-button>
+                  </div>
+                `)}
+              </div>
+            ` : A}
+            <ha-selector
+              .hass=${this.hass}
+              .selector=${ZONE_ENTITY_SELECTOR}
+              .value=${null}
+              placeholder="Add location from zone…"
+              @value-changed=${this._addLocationFromZone}
+            ></ha-selector>
+          </div>
+        </ha-expansion-panel>
 
         <!-- ── Advanced — ha-expansion-panel pattern from lovelace-mushroom ── -->
         <ha-expansion-panel outlined>
@@ -1014,39 +1079,29 @@ var init_wizard_clock_card_editor = __esm({
       gap: 12px;
     }
 
-    .section-header {
-      font-size: var(--ha-font-size-l, 1rem);
-      font-weight: var(--ha-font-weight-medium, 500);
-      color: var(--primary-text-color);
-      padding-top: 4px;
-    }
-
     .hint {
-      margin: -4px 0 0;
+      margin: 0;
       font-size: var(--ha-font-size-s, 0.875rem);
       color: var(--secondary-text-color);
     }
 
-    .wizard-card {
-      border: 1px solid var(--divider-color, #e0e0e0);
-      border-radius: var(--ha-border-radius-lg, 12px);
-      padding: 4px 12px 12px;
-    }
-
-    .wizard-header {
+    .wizards-list {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .wizard-title {
-      font-weight: var(--ha-font-weight-medium, 500);
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     ha-alert {
       display: block;
-      margin-top: 4px;
+      margin-top: 8px;
+    }
+
+    .migration-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
     }
 
     .location-list {
@@ -1097,8 +1152,11 @@ var init_wizard_clock_card_editor = __esm({
     __decorateClass([
       r5()
     ], WizardClockCardEditor.prototype, "_config", 2);
+    __decorateClass([
+      r5()
+    ], WizardClockCardEditor.prototype, "_wizardsExpanded", 2);
     WizardClockCardEditor = __decorateClass([
-      t3(`${"wizard-clock-card"}-editor`)
+      t3(`${"wizard-clock-card-dev"}-editor`)
     ], WizardClockCardEditor);
   }
 });
@@ -1132,9 +1190,7 @@ var WizardClockCard = class extends i4 {
     // reading from `this` (the shadow host) gives HA's theme values correctly.
     this._colours = {
       primary: "",
-      primaryText: "",
-      secondaryBackground: "",
-      primaryBackground: ""
+      primaryText: ""
     };
     // Resolved config values — extracted once in setConfig() and after migration.
     this._lostState = "Lost";
@@ -1142,11 +1198,18 @@ var WizardClockCard = class extends i4 {
     this._minLocationSlots = 0;
     this._selectedFont = "Palatino Linotype, Palatino, Book Antiqua, serif";
     this._shaftColour = "";
+    this._faceColour = "";
+    this._locationColour = "";
+    this._borderColour = "";
     this._exclude = [];
     // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
     // Avoids measureText() calls on every animation frame in _drawNumbers().
     this._charWidthCache = /* @__PURE__ */ new Map();
-    this._textHeight = 0;
+    this._labelFontSize = 0;
+    // Inward offset from r to the label text anchor (centre of glyph row).
+    // = ascent (scales with font) + fixed border clearance (r × 0.06).
+    // Used for both the text y-position and the arc-radius in _drawNumbers().
+    this._labelOffset = 0;
   }
   // ── HA lifecycle ─────────────────────────────────────────────────────────────
   // Called by HA before the element is connected. Throw to show an error card.
@@ -1154,7 +1217,7 @@ var WizardClockCard = class extends i4 {
     console.info(
       "%c %s %c %s",
       "color: white; background: forestgreen; font-weight: 700;",
-      "wizard-clock-card".toUpperCase(),
+      "wizard-clock-card-dev".toUpperCase(),
       "color: forestgreen; background: white; font-weight: 700;",
       VERSION
     );
@@ -1164,7 +1227,6 @@ var WizardClockCard = class extends i4 {
     this._travellingState = this._config.travelling ?? "Travelling";
     this._minLocationSlots = this._config.min_location_slots ?? 0;
     this._selectedFont = this._config.fontName ?? "Palatino Linotype, Palatino, Book Antiqua, serif";
-    this._shaftColour = this._config.shaft_colour ?? "";
     this._exclude = [...this._config.exclude ?? []];
     this._trackedEntities = this._buildTrackedEntityList();
     if (this._config.fontface && !_injectedFontFaces.has(this._config.fontface)) {
@@ -1179,7 +1241,7 @@ var WizardClockCard = class extends i4 {
   // it is only parsed when someone actually opens the card editor.
   static async getConfigElement() {
     await Promise.resolve().then(() => (init_wizard_clock_card_editor(), wizard_clock_card_editor_exports));
-    return document.createElement(`${"wizard-clock-card"}-editor`);
+    return document.createElement(`${"wizard-clock-card-dev"}-editor`);
   }
   // Minimal valid config shown in the "Add Card" dialog preview.
   // HA always provides hass when calling this for custom cards.
@@ -1220,7 +1282,7 @@ var WizardClockCard = class extends i4 {
   // Safe to query elements and set up observers here.
   firstUpdated() {
     const ctx = this._canvas.getContext("2d");
-    if (!ctx) throw new Error(`Browser does not support ${"wizard-clock-card"} canvas.`);
+    if (!ctx) throw new Error(`Browser does not support ${"wizard-clock-card-dev"} canvas.`);
     this._ctx = ctx;
     this._resizeObserver = new ResizeObserver(() => {
       clearTimeout(this._resizeTimeout);
@@ -1262,6 +1324,15 @@ var WizardClockCard = class extends i4 {
     }
     clearTimeout(this._resizeTimeout);
   }
+  // Converts a ui_color value (hex string, CSS colour name, or HA colour token)
+  // to a string canvas fillStyle/strokeStyle can consume.
+  _resolveColour(token, cs, fallback) {
+    if (!token) return fallback;
+    if (token.startsWith("#") || /^rgba?|^hsla?/.test(token)) return token;
+    const cssVar = WizardClockCard._COLOR_TOKENS[token];
+    if (cssVar) return cs.getPropertyValue(cssVar).trim() || fallback;
+    return token;
+  }
   // ── Drawing ───────────────────────────────────────────────────────────────────
   // Rebuilds zone/wizard state and kicks off the animation frame.
   // Called on every relevant hass update and on resize.
@@ -1286,13 +1357,13 @@ var WizardClockCard = class extends i4 {
     const cs = getComputedStyle(this);
     this._colours = {
       primary: cs.getPropertyValue("--primary-color").trim(),
-      primaryText: cs.getPropertyValue("--primary-text-color").trim(),
-      secondaryBackground: cs.getPropertyValue("--secondary-background-color").trim(),
-      primaryBackground: cs.getPropertyValue("--primary-background-color").trim()
+      primaryText: cs.getPropertyValue("--primary-text-color").trim()
     };
-    if (!this._shaftColour) {
-      this._shaftColour = this._colours.primary;
-    }
+    const rc = (v2, def) => this._resolveColour(v2 ?? "", cs, def);
+    this._faceColour = rc(this._config.face_colour, "#EDE0C4");
+    this._locationColour = rc(this._config.location_colour, "#1a1a1a");
+    this._borderColour = rc(this._config.border_colour, "#1a1a1a");
+    this._shaftColour = rc(this._config.shaft_colour, "#1a1a1a");
     this._zones = [];
     for (const loc of this._config.locations ?? []) {
       if (!this._zones.includes(loc)) this._zones.push(loc);
@@ -1311,7 +1382,7 @@ var WizardClockCard = class extends i4 {
     while (this._zones.length < this._minLocationSlots) {
       this._zones.push(" ");
     }
-    this._targetstate = this._buildTargetState();
+    this._targetstate = this._buildTargetState(cs);
     for (let i5 = 0; i5 < this._targetstate.length; i5++) {
       if (this._currentstate[i5]) {
         const t4 = this._targetstate[i5];
@@ -1323,15 +1394,32 @@ var WizardClockCard = class extends i4 {
       }
     }
     this._ctx.save();
-    this._ctx.font = `${this._radius * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const nominalSize = this._radius * 0.15 * FONT_SCALE;
+    this._ctx.font = `${nominalSize}px ${this._selectedFont}`;
     const m2 = this._ctx.measureText("Mg");
-    this._textHeight = m2.actualBoundingBoxAscent + m2.actualBoundingBoxDescent;
+    const nominalAscent = m2.actualBoundingBoxAscent;
     this._charWidthCache.clear();
     for (const zone of this._zones) {
       for (const char of zone) {
         if (!this._charWidthCache.has(char)) {
           this._charWidthCache.set(char, this._ctx.measureText(char).width);
         }
+      }
+    }
+    const nominalOffset = nominalAscent + this._radius * 0.06;
+    const n5 = this._zones.length || 1;
+    const arcPerLabel = 2 * Math.PI * (this._radius - nominalOffset) / n5;
+    let maxLabelWidth = 0;
+    for (const zone of this._zones) {
+      const w2 = [...zone].reduce((s4, ch) => s4 + (this._charWidthCache.get(ch) ?? 0), 0);
+      maxLabelWidth = Math.max(maxLabelWidth, w2);
+    }
+    const scale = maxLabelWidth > arcPerLabel * 0.9 ? arcPerLabel * 0.9 / maxLabelWidth : 1;
+    this._labelFontSize = nominalSize * scale;
+    this._labelOffset = nominalAscent * scale + this._radius * 0.06;
+    if (scale < 1) {
+      for (const [ch, w2] of this._charWidthCache) {
+        this._charWidthCache.set(ch, w2 * scale);
       }
     }
     this._ctx.restore();
@@ -1343,18 +1431,15 @@ var WizardClockCard = class extends i4 {
     if (DEBUG) console.log(`${this._tag()}update complete, zones: ${this._zones.join(", ")}`);
   }
   // Single source of truth for a wizard's current state string.
-  // Accepts a full WizardConfig (or a plain entity string for internal calls).
   _getWizardState(wizard) {
-    const entity = typeof wizard === "string" ? wizard : wizard.entity;
-    const state = this.hass.states[entity];
+    const state = this.hass.states[wizard.entity];
     if (!state) {
-      console.log(`${this._tag()}Wizard ${entity} does not exist.`);
+      console.log(`${this._tag()}Wizard ${wizard.entity} does not exist.`);
       return this._lostState;
     }
     const attrs = state.attributes;
     const stateVelo = attrs.velocity ?? attrs.speed ?? (attrs.moving ? 16 : 0);
-    const proxSensor = typeof wizard === "string" ? null : wizard.proximity_sensor;
-    const proxState = proxSensor ? this.hass.states[proxSensor] : void 0;
+    const proxState = wizard.proximity_sensor ? this.hass.states[wizard.proximity_sensor] : void 0;
     const isMovingByProximity = proxState && ["towards", "away_from"].includes(proxState.state);
     let stateStr = "not_home";
     if (state.state && state.state !== "off" && state.state !== "unknown") {
@@ -1413,10 +1498,10 @@ var WizardClockCard = class extends i4 {
     ctx.shadowOffsetY = 0;
     ctx.beginPath();
     ctx.arc(0, 0, this._radius, 0, 2 * Math.PI);
-    ctx.fillStyle = this._colours.secondaryBackground;
+    ctx.fillStyle = this._faceColour;
     ctx.fill();
-    ctx.strokeStyle = this._colours.primaryBackground;
-    ctx.lineWidth = this._radius * 0.02;
+    ctx.strokeStyle = this._borderColour;
+    ctx.lineWidth = this._radius * 0.08;
     ctx.stroke();
     ctx.restore();
   }
@@ -1436,18 +1521,17 @@ var WizardClockCard = class extends i4 {
   _drawNumbers() {
     const ctx = this._ctx;
     const r6 = this._radius;
-    const textHeight = this._textHeight;
-    ctx.font = `${r6 * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const offset = this._labelOffset;
+    ctx.font = `${this._labelFontSize}px ${this._selectedFont}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillStyle = this._colours.primaryText;
+    ctx.fillStyle = this._locationColour;
     for (let num = 0; num < this._zones.length; num++) {
       ctx.save();
       const ang = num * Math.PI / this._zones.length * 2;
       ctx.rotate(ang);
       let startAngle = 0;
       let inwardFacing = true;
-      const kerning = 0;
       let text = this._zones[num].split("").reverse().join("");
       if (ang > Math.PI / 2 && ang < Math.PI * 2 - Math.PI / 2) {
         startAngle = Math.PI;
@@ -1457,14 +1541,14 @@ var WizardClockCard = class extends i4 {
       if (this._isRtlLanguage(text)) text = text.split("").reverse().join("");
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        startAngle += (charWid + (j === text.length - 1 ? 0 : kerning)) / (r6 - textHeight) / 2;
+        startAngle += charWid / (r6 - offset) / 2;
       }
       ctx.rotate(startAngle);
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
-        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + textHeight));
-        ctx.rotate((charWid / 2 + kerning) / (r6 - textHeight) * -1);
+        ctx.rotate(charWid / 2 / (r6 - offset) * -1);
+        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + offset));
+        ctx.rotate(charWid / 2 / (r6 - offset) * -1);
       }
       ctx.restore();
     }
@@ -1483,7 +1567,7 @@ var WizardClockCard = class extends i4 {
       this._drawHand(hand);
     }
   }
-  _buildTargetState() {
+  _buildTargetState(cs) {
     const targets = [];
     for (let num = 0; num < this._config.wizards.length; num++) {
       const wizard = this._config.wizards[num];
@@ -1497,13 +1581,15 @@ var WizardClockCard = class extends i4 {
         }
       }
       const displayName = wizard.name || this.hass.states[wizard.entity]?.attributes?.friendly_name || wizard.entity;
+      const colour = wizard.colour ? this._resolveColour(wizard.colour, cs, this._colours.primary) : void 0;
+      const textcolour = wizard.textcolour ? this._resolveColour(wizard.textcolour, cs, this._colours.primaryText) : void 0;
       targets.push({
         pos: location * Math.PI / this._zones.length * 2,
         length: this._radius * 0.7,
         width: this._radius * 0.1,
         wizard: displayName,
-        colour: wizard.colour,
-        textcolour: wizard.textcolour
+        colour,
+        textcolour
       });
     }
     return targets;
@@ -1613,6 +1699,22 @@ WizardClockCard.styles = i`
       height: 0;
     }
   `;
+// ── Colour resolution ────────────────────────────────────────────────────────
+// Maps HA ui_color token names to their CSS custom properties so canvas can
+// use them. Users pick these from the ui_color picker in the editor.
+WizardClockCard._COLOR_TOKENS = {
+  "primary": "--primary-color",
+  "accent": "--accent-color",
+  "primary-background": "--primary-background-color",
+  "secondary-background": "--secondary-background-color",
+  "primary-text": "--primary-text-color",
+  "secondary-text": "--secondary-text-color",
+  "disabled": "--disabled-color",
+  "error": "--error-color",
+  "warning": "--warning-color",
+  "success": "--success-color",
+  "info": "--info-color"
+};
 __decorateClass([
   n4({ attribute: false })
 ], WizardClockCard.prototype, "hass", 2);
@@ -1629,11 +1731,11 @@ __decorateClass([
   e5("canvas")
 ], WizardClockCard.prototype, "_canvas", 2);
 WizardClockCard = __decorateClass([
-  t3("wizard-clock-card")
+  t3("wizard-clock-card-dev")
 ], WizardClockCard);
 window.customCards ??= [];
 window.customCards.push({
-  type: "wizard-clock-card",
+  type: "wizard-clock-card-dev",
   name: "Wizard Clock Card",
   description: "Harry Potter-style location clock for Home Assistant",
   preview: true
