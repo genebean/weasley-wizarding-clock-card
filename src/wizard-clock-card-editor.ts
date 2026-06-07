@@ -43,6 +43,9 @@ const ADVANCED_SCHEMA = [
   { name: 'lost',               selector: { text: {} } },
   { name: 'travelling',         selector: { text: {} } },
   { name: 'min_location_slots', selector: { number: { min: 1, max: 20, mode: 'box' as const } } },
+  { name: 'face_colour',        selector: { ui_color: {} } },
+  { name: 'location_colour',    selector: { ui_color: {} } },
+  { name: 'border_colour',      selector: { ui_color: {} } },
   { name: 'shaft_colour',       selector: { ui_color: {} } },
   { name: 'fontName',           selector: { text: {} } },
   { name: 'fontface',           selector: { text: { multiline: true } } },
@@ -54,6 +57,9 @@ const ADVANCED_LABELS: Record<string, string> = {
   lost:               'Label for "Lost"',
   travelling:         'Label for "Travelling"',
   min_location_slots: 'Minimum location slots',
+  face_colour:        'Clock face colour',
+  location_colour:    'Location text colour',
+  border_colour:      'Border colour',
   shaft_colour:       'Shaft colour',
   fontName:           'Font name',
   fontface:           '@font-face CSS',
@@ -171,13 +177,30 @@ class WizardClockCardEditor extends LitElement {
     this._fire(cfg);
   }
 
+  // ── Migration banner handlers ────────────────────────────────────────────────
+
+  // Shaft colour default changed to #1a1a1a. These handlers let the user lock in
+  // their preference so the banner only appears until they decide.
+  private _migrateShaftToTheme(): void {
+    const primary = getComputedStyle(this).getPropertyValue('--primary-color').trim();
+    this._fire({ ...this._config!, shaft_colour: primary || '#6750A4' });
+  }
+
+  private _migrateShaftToDark(): void {
+    this._fire({ ...this._config!, shaft_colour: '#1a1a1a' });
+  }
+
   // ── Advanced helper ──────────────────────────────────────────────────────────
 
   private _advancedChanged(e: CustomEvent): void {
     const data = e.detail.value as Record<string, unknown>;
     const cfg: WizardClockCardConfig = { ...this._config!, ...data };
-    // Remove falsy optional text fields so config stays clean.
-    for (const k of ['header', 'lost', 'travelling', 'shaft_colour', 'fontName', 'fontface'] as const) {
+    // Remove falsy optional fields so config stays clean.
+    for (const k of [
+      'header', 'lost', 'travelling',
+      'shaft_colour', 'face_colour', 'location_colour', 'border_colour',
+      'fontName', 'fontface',
+    ] as const) {
       if (!cfg[k]) delete cfg[k];
     }
     if (cfg.min_location_slots == null) delete cfg.min_location_slots;
@@ -254,13 +277,33 @@ class WizardClockCardEditor extends LitElement {
       lost:               this._config.lost,
       travelling:         this._config.travelling,
       min_location_slots: this._config.min_location_slots ?? null,
-      shaft_colour:       this._config.shaft_colour,
+      face_colour:        this._config.face_colour        ?? null,
+      location_colour:    this._config.location_colour    ?? null,
+      border_colour:      this._config.border_colour      ?? null,
+      shaft_colour:       this._config.shaft_colour       ?? null,
       fontName:           this._config.fontName,
       fontface:           this._config.fontface,
     };
 
     return html`
       <div class="card-config">
+
+        <!-- ── Migration banner: shaft_colour default changed ── -->
+        ${!this._config.shaft_colour ? html`
+          <ha-alert alert-type="info" title="Default hand colour changed">
+            Hand and hinge colour now defaults to dark (<code>#1a1a1a</code>),
+            matching the classic clock look. Previously it used your theme's
+            primary colour. Choose how to proceed:
+            <div class="migration-actions">
+              <ha-button @click=${this._migrateShaftToTheme}>
+                Restore theme colour
+              </ha-button>
+              <ha-button @click=${this._migrateShaftToDark}>
+                Keep dark default
+              </ha-button>
+            </div>
+          </ha-alert>
+        ` : nothing}
 
         <!-- ── Wizards ── -->
         <ha-expansion-panel outlined
@@ -354,6 +397,13 @@ class WizardClockCardEditor extends LitElement {
     ha-alert {
       display: block;
       margin-top: 8px;
+    }
+
+    .migration-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
     }
 
     .location-list {

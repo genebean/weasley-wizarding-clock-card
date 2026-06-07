@@ -40,7 +40,10 @@ export interface WizardClockCardConfig {
   // Canonical camelCase spelling; migrateConfig() maps 'fontname' here.
   fontName?: string;
   fontface?: string;
-  shaft_colour?: string;
+  shaft_colour?:    string;
+  face_colour?:     string;
+  location_colour?: string;
+  border_colour?:   string;
   exclude?: string[];
 }
 
@@ -121,7 +124,10 @@ class WizardClockCard extends LitElement {
   private _travellingState = 'Travelling';
   private _minLocationSlots = 0;
   private _selectedFont = 'Palatino Linotype, Palatino, Book Antiqua, serif';
-  private _shaftColour = '';
+  private _shaftColour    = '';
+  private _faceColour     = '';
+  private _locationColour = '';
+  private _borderColour   = '';
   private _exclude: string[] = [];
 
   // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
@@ -317,6 +323,34 @@ class WizardClockCard extends LitElement {
     clearTimeout(this._resizeTimeout);
   }
 
+  // ── Colour resolution ────────────────────────────────────────────────────────
+
+  // Maps HA ui_color token names to their CSS custom properties so canvas can
+  // use them. Users pick these from the ui_color picker in the editor.
+  private static readonly _COLOR_TOKENS: Record<string, string> = {
+    'primary':              '--primary-color',
+    'accent':               '--accent-color',
+    'primary-background':   '--primary-background-color',
+    'secondary-background': '--secondary-background-color',
+    'primary-text':         '--primary-text-color',
+    'secondary-text':       '--secondary-text-color',
+    'disabled':             '--disabled-color',
+    'error':                '--error-color',
+    'warning':              '--warning-color',
+    'success':              '--success-color',
+    'info':                 '--info-color',
+  };
+
+  // Converts a ui_color value (hex string, CSS colour name, or HA colour token)
+  // to a string canvas fillStyle/strokeStyle can consume.
+  private _resolveColour(token: string, cs: CSSStyleDeclaration, fallback: string): string {
+    if (!token) return fallback;
+    if (token.startsWith('#') || /^rgba?|^hsla?/.test(token)) return token;
+    const cssVar = WizardClockCard._COLOR_TOKENS[token];
+    if (cssVar) return cs.getPropertyValue(cssVar).trim() || fallback;
+    return token; // CSS named colour (red, blue…) or unknown — use as-is
+  }
+
   // ── Drawing ───────────────────────────────────────────────────────────────────
 
   // Rebuilds zone/wizard state and kicks off the animation frame.
@@ -367,10 +401,14 @@ class WizardClockCard extends LitElement {
       primaryBackground:   cs.getPropertyValue('--primary-background-color').trim(),
     };
 
-    // Fall back to theme primary colour if shaft_colour was not configured.
-    if (!this._shaftColour) {
-      this._shaftColour = this._colours.primary;
-    }
+    // Resolve all configurable colours from config on every update so theme
+    // token values (e.g. "primary") reflect the current theme.
+    const rc = (v: string | undefined, def: string) =>
+      this._resolveColour(v ?? '', cs, def);
+    this._faceColour     = rc(this._config.face_colour,     '#EDE0C4');
+    this._locationColour = rc(this._config.location_colour, '#1a1a1a');
+    this._borderColour   = rc(this._config.border_colour,   '#1a1a1a');
+    this._shaftColour    = rc(this._config.shaft_colour,    '#1a1a1a');
 
     // Build zone list from configured locations then add any wizard states
     // that are not already represented (e.g. Lost, Travelling, unknown zones).
@@ -538,10 +576,10 @@ class WizardClockCard extends LitElement {
     ctx.shadowOffsetY = 0;
     ctx.beginPath();
     ctx.arc(0, 0, this._radius, 0, 2 * Math.PI);
-    ctx.fillStyle   = this._colours.secondaryBackground;
+    ctx.fillStyle   = this._faceColour;
     ctx.fill();
-    ctx.strokeStyle = this._colours.primaryBackground;
-    ctx.lineWidth   = this._radius * 0.02;
+    ctx.strokeStyle = this._borderColour;
+    ctx.lineWidth   = this._radius * 0.08;
     ctx.stroke();
     ctx.restore();
   }
@@ -567,7 +605,7 @@ class WizardClockCard extends LitElement {
     ctx.font         = `${r * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
     ctx.textBaseline = 'middle';
     ctx.textAlign    = 'center';
-    ctx.fillStyle    = this._colours.primaryText;
+    ctx.fillStyle    = this._locationColour;
 
     for (let num = 0; num < this._zones.length; num++) {
       ctx.save();
