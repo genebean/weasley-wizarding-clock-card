@@ -12,8 +12,8 @@ declare const CARDNAME: string;
 const WIZARD_SCHEMA = [
   { name: 'entity',   selector: { entity: { filter: { domain: ['person', 'device_tracker', 'calendar'] } } } },
   { name: 'name',     selector: { text: {} } },
-  { name: 'colour',   selector: { text: {} } },
-  { name: 'textcolour', selector: { text: {} } },
+  { name: 'colour',   selector: { ui_color: {} } },
+  { name: 'textcolour', selector: { ui_color: {} } },
   { name: 'proximity_sensor', selector: { entity: { filter: { integration: 'proximity' } } } },
 ] as const;
 
@@ -27,8 +27,6 @@ const WIZARD_LABELS: Record<string, string> = {
 
 const WIZARD_HELPERS: Record<string, string> = {
   name:             'Short name shown on the clock hand',
-  colour:           'Hex colour, e.g. #4A90E2',
-  textcolour:       'Hex colour, e.g. #FFFFFF',
   proximity_sensor: 'Optional — direction-of-travel sensor from the Proximity integration',
 };
 
@@ -45,7 +43,7 @@ const ADVANCED_SCHEMA = [
   { name: 'lost',               selector: { text: {} } },
   { name: 'travelling',         selector: { text: {} } },
   { name: 'min_location_slots', selector: { number: { min: 1, max: 20, mode: 'box' as const } } },
-  { name: 'shaft_colour',       selector: { text: {} } },
+  { name: 'shaft_colour',       selector: { ui_color: {} } },
   { name: 'fontName',           selector: { text: {} } },
   { name: 'fontface',           selector: { text: { multiline: true } } },
 ] as const;
@@ -62,9 +60,8 @@ const ADVANCED_LABELS: Record<string, string> = {
 };
 
 const ADVANCED_HELPERS: Record<string, string> = {
-  shaft_colour: 'Hex colour for clock hand shafts',
-  fontName:     'CSS font-family value, e.g. "Harry P"',
-  fontface:     'Expert use only — raw @font-face CSS block',
+  fontName:  'CSS font-family value, e.g. "Harry P"',
+  fontface:  'Expert use only — raw @font-face CSS block',
 };
 
 // ── Ensure HA lazy-loaded editor components are available ─────────────────────
@@ -208,8 +205,8 @@ class WizardClockCardEditor extends LitElement {
     const wizardData = {
       entity:           w.entity   || null,
       name:             w.name,
-      colour:           w.colour   ?? '',
-      textcolour:       w.textcolour ?? '',
+      colour:           w.colour   ?? null,
+      textcolour:       w.textcolour ?? null,
       proximity_sensor: w.proximity_sensor || null,
     };
 

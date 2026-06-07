@@ -768,8 +768,8 @@ var init_wizard_clock_card_editor = __esm({
     WIZARD_SCHEMA = [
       { name: "entity", selector: { entity: { filter: { domain: ["person", "device_tracker", "calendar"] } } } },
       { name: "name", selector: { text: {} } },
-      { name: "colour", selector: { text: {} } },
-      { name: "textcolour", selector: { text: {} } },
+      { name: "colour", selector: { ui_color: {} } },
+      { name: "textcolour", selector: { ui_color: {} } },
       { name: "proximity_sensor", selector: { entity: { filter: { integration: "proximity" } } } }
     ];
     WIZARD_LABELS = {
@@ -781,8 +781,6 @@ var init_wizard_clock_card_editor = __esm({
     };
     WIZARD_HELPERS = {
       name: "Short name shown on the clock hand",
-      colour: "Hex colour, e.g. #4A90E2",
-      textcolour: "Hex colour, e.g. #FFFFFF",
       proximity_sensor: "Optional \u2014 direction-of-travel sensor from the Proximity integration"
     };
     ZONE_ENTITY_SELECTOR = {
@@ -793,7 +791,7 @@ var init_wizard_clock_card_editor = __esm({
       { name: "lost", selector: { text: {} } },
       { name: "travelling", selector: { text: {} } },
       { name: "min_location_slots", selector: { number: { min: 1, max: 20, mode: "box" } } },
-      { name: "shaft_colour", selector: { text: {} } },
+      { name: "shaft_colour", selector: { ui_color: {} } },
       { name: "fontName", selector: { text: {} } },
       { name: "fontface", selector: { text: { multiline: true } } }
     ];
@@ -808,7 +806,6 @@ var init_wizard_clock_card_editor = __esm({
       fontface: "@font-face CSS"
     };
     ADVANCED_HELPERS = {
-      shaft_colour: "Hex colour for clock hand shafts",
       fontName: 'CSS font-family value, e.g. "Harry P"',
       fontface: "Expert use only \u2014 raw @font-face CSS block"
     };
@@ -904,8 +901,8 @@ var init_wizard_clock_card_editor = __esm({
         const wizardData = {
           entity: w2.entity || null,
           name: w2.name,
-          colour: w2.colour ?? "",
-          textcolour: w2.textcolour ?? "",
+          colour: w2.colour ?? null,
+          textcolour: w2.textcolour ?? null,
           proximity_sensor: w2.proximity_sensor || null
         };
         return b2`
