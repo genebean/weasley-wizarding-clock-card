@@ -815,6 +815,7 @@ var init_wizard_clock_card_editor = __esm({
     WizardClockCardEditor = class extends i4 {
       constructor() {
         super(...arguments);
+        this._wizardsExpanded = true;
         // ── computeLabel / computeHelper (class-property arrow fns avoid rebind) ────
         this._computeWizardLabel = (schema) => WIZARD_LABELS[schema.name] ?? schema.name;
         this._computeWizardHelper = (schema) => WIZARD_HELPERS[schema.name] ?? "";
@@ -908,32 +909,38 @@ var init_wizard_clock_card_editor = __esm({
           proximity_sensor: w2.proximity_sensor || null
         };
         return b2`
-      <div class="wizard-card">
-        <div class="wizard-header">
-          <span class="wizard-title">${w2.name || w2.entity || `Wizard ${i5 + 1}`}</span>
-          <ha-icon-button
-            .label=${"Remove wizard"}
-            @click=${() => this._removeWizard(i5)}
-          >
-            <ha-icon icon="mdi:delete"></ha-icon>
-          </ha-icon-button>
+      <ha-expansion-panel outlined
+        @expanded-changed=${(e6) => e6.stopPropagation()}
+      >
+        <span slot="header">${w2.name || w2.entity || `Wizard ${i5 + 1}`}</span>
+        <ha-icon-button
+          slot="icons"
+          .label=${"Remove wizard"}
+          @click=${(e6) => {
+          e6.preventDefault();
+          this._removeWizard(i5);
+        }}
+        >
+          <ha-icon icon="mdi:delete"></ha-icon>
+        </ha-icon-button>
+        <div class="content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${wizardData}
+            .schema=${WIZARD_SCHEMA}
+            .computeLabel=${this._computeWizardLabel}
+            .computeHelper=${this._computeWizardHelper}
+            @value-changed=${(e6) => this._wizardFormChanged(i5, e6.detail.value)}
+          ></ha-form>
+          ${!proxOk ? b2`
+            <ha-alert alert-type="warning">
+              This entity doesn't look like a direction-of-travel sensor.
+              Expected <code>device_class: enum</code> with
+              <code>towards</code> and <code>away_from</code> options.
+            </ha-alert>
+          ` : A}
         </div>
-        <ha-form
-          .hass=${this.hass}
-          .data=${wizardData}
-          .schema=${WIZARD_SCHEMA}
-          .computeLabel=${this._computeWizardLabel}
-          .computeHelper=${this._computeWizardHelper}
-          @value-changed=${(e6) => this._wizardFormChanged(i5, e6.detail.value)}
-        ></ha-form>
-        ${!proxOk ? b2`
-          <ha-alert alert-type="warning">
-            This entity doesn't look like a direction-of-travel sensor.
-            Expected <code>device_class: enum</code> with
-            <code>towards</code> and <code>away_from</code> options.
-          </ha-alert>
-        ` : A}
-      </div>
+      </ha-expansion-panel>
     `;
       }
       render() {
@@ -952,9 +959,21 @@ var init_wizard_clock_card_editor = __esm({
       <div class="card-config">
 
         <!-- ── Wizards ── -->
-        <div class="section-header">Wizards</div>
-        ${(this._config.wizards ?? []).map((w2, i5) => this._renderWizard(w2, i5))}
-        <ha-button @click=${this._addWizard}>Add wizard</ha-button>
+        <ha-expansion-panel outlined
+          .expanded=${this._wizardsExpanded}
+          @expanded-changed=${(e6) => {
+          this._wizardsExpanded = e6.detail.expanded;
+        }}
+        >
+          <ha-icon slot="leading-icon" icon="mdi:account-group"></ha-icon>
+          <h3 slot="header">Wizards</h3>
+          <div class="content">
+            <div class="wizards-list">
+              ${(this._config.wizards ?? []).map((w2, i5) => this._renderWizard(w2, i5))}
+            </div>
+            <ha-button @click=${this._addWizard}>Add wizard</ha-button>
+          </div>
+        </ha-expansion-panel>
 
         <!-- ── Locations ── -->
         <div class="section-header">Locations</div>
@@ -1027,26 +1046,16 @@ var init_wizard_clock_card_editor = __esm({
       color: var(--secondary-text-color);
     }
 
-    .wizard-card {
-      border: 1px solid var(--divider-color, #e0e0e0);
-      border-radius: var(--ha-border-radius-lg, 12px);
-      padding: 4px 12px 12px;
-    }
-
-    .wizard-header {
+    .wizards-list {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .wizard-title {
-      font-weight: var(--ha-font-weight-medium, 500);
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     ha-alert {
       display: block;
-      margin-top: 4px;
+      margin-top: 8px;
     }
 
     .location-list {
@@ -1097,6 +1106,9 @@ var init_wizard_clock_card_editor = __esm({
     __decorateClass([
       r5()
     ], WizardClockCardEditor.prototype, "_config", 2);
+    __decorateClass([
+      r5()
+    ], WizardClockCardEditor.prototype, "_wizardsExpanded", 2);
     WizardClockCardEditor = __decorateClass([
       t3(`${"wizard-clock-card-dev"}-editor`)
     ], WizardClockCardEditor);

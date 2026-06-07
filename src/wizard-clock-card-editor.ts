@@ -86,6 +86,7 @@ function loadHaComponents() {
 class WizardClockCardEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @state() private _config?: WizardClockCardConfig;
+  @state() private _wizardsExpanded = true;
 
   connectedCallback() {
     super.connectedCallback();
@@ -213,32 +214,35 @@ class WizardClockCardEditor extends LitElement {
     };
 
     return html`
-      <div class="wizard-card">
-        <div class="wizard-header">
-          <span class="wizard-title">${w.name || w.entity || `Wizard ${i + 1}`}</span>
-          <ha-icon-button
-            .label=${'Remove wizard'}
-            @click=${() => this._removeWizard(i)}
-          >
-            <ha-icon icon="mdi:delete"></ha-icon>
-          </ha-icon-button>
+      <ha-expansion-panel outlined
+        @expanded-changed=${(e: Event) => e.stopPropagation()}
+      >
+        <span slot="header">${w.name || w.entity || `Wizard ${i + 1}`}</span>
+        <ha-icon-button
+          slot="icons"
+          .label=${'Remove wizard'}
+          @click=${(e: Event) => { e.preventDefault(); this._removeWizard(i); }}
+        >
+          <ha-icon icon="mdi:delete"></ha-icon>
+        </ha-icon-button>
+        <div class="content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${wizardData}
+            .schema=${WIZARD_SCHEMA}
+            .computeLabel=${this._computeWizardLabel}
+            .computeHelper=${this._computeWizardHelper}
+            @value-changed=${(e: CustomEvent) => this._wizardFormChanged(i, e.detail.value)}
+          ></ha-form>
+          ${!proxOk ? html`
+            <ha-alert alert-type="warning">
+              This entity doesn't look like a direction-of-travel sensor.
+              Expected <code>device_class: enum</code> with
+              <code>towards</code> and <code>away_from</code> options.
+            </ha-alert>
+          ` : nothing}
         </div>
-        <ha-form
-          .hass=${this.hass}
-          .data=${wizardData}
-          .schema=${WIZARD_SCHEMA}
-          .computeLabel=${this._computeWizardLabel}
-          .computeHelper=${this._computeWizardHelper}
-          @value-changed=${(e: CustomEvent) => this._wizardFormChanged(i, e.detail.value)}
-        ></ha-form>
-        ${!proxOk ? html`
-          <ha-alert alert-type="warning">
-            This entity doesn't look like a direction-of-travel sensor.
-            Expected <code>device_class: enum</code> with
-            <code>towards</code> and <code>away_from</code> options.
-          </ha-alert>
-        ` : nothing}
-      </div>
+      </ha-expansion-panel>
     `;
   }
 
@@ -262,9 +266,19 @@ class WizardClockCardEditor extends LitElement {
       <div class="card-config">
 
         <!-- ── Wizards ── -->
-        <div class="section-header">Wizards</div>
-        ${(this._config.wizards ?? []).map((w, i) => this._renderWizard(w, i))}
-        <ha-button @click=${this._addWizard}>Add wizard</ha-button>
+        <ha-expansion-panel outlined
+          .expanded=${this._wizardsExpanded}
+          @expanded-changed=${(e: CustomEvent) => { this._wizardsExpanded = e.detail.expanded; }}
+        >
+          <ha-icon slot="leading-icon" icon="mdi:account-group"></ha-icon>
+          <h3 slot="header">Wizards</h3>
+          <div class="content">
+            <div class="wizards-list">
+              ${(this._config.wizards ?? []).map((w, i) => this._renderWizard(w, i))}
+            </div>
+            <ha-button @click=${this._addWizard}>Add wizard</ha-button>
+          </div>
+        </ha-expansion-panel>
 
         <!-- ── Locations ── -->
         <div class="section-header">Locations</div>
@@ -337,26 +351,16 @@ class WizardClockCardEditor extends LitElement {
       color: var(--secondary-text-color);
     }
 
-    .wizard-card {
-      border: 1px solid var(--divider-color, #e0e0e0);
-      border-radius: var(--ha-border-radius-lg, 12px);
-      padding: 4px 12px 12px;
-    }
-
-    .wizard-header {
+    .wizards-list {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .wizard-title {
-      font-weight: var(--ha-font-weight-medium, 500);
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     ha-alert {
       display: block;
-      margin-top: 4px;
+      margin-top: 8px;
     }
 
     .location-list {
