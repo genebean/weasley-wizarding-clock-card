@@ -1190,9 +1190,7 @@ var WizardClockCard = class extends i4 {
     // reading from `this` (the shadow host) gives HA's theme values correctly.
     this._colours = {
       primary: "",
-      primaryText: "",
-      secondaryBackground: "",
-      primaryBackground: ""
+      primaryText: ""
     };
     // Resolved config values — extracted once in setConfig() and after migration.
     this._lostState = "Lost";
@@ -1225,7 +1223,6 @@ var WizardClockCard = class extends i4 {
     this._travellingState = this._config.travelling ?? "Travelling";
     this._minLocationSlots = this._config.min_location_slots ?? 0;
     this._selectedFont = this._config.fontName ?? "Palatino Linotype, Palatino, Book Antiqua, serif";
-    this._shaftColour = this._config.shaft_colour ?? "";
     this._exclude = [...this._config.exclude ?? []];
     this._trackedEntities = this._buildTrackedEntityList();
     if (this._config.fontface && !_injectedFontFaces.has(this._config.fontface)) {
@@ -1356,9 +1353,7 @@ var WizardClockCard = class extends i4 {
     const cs = getComputedStyle(this);
     this._colours = {
       primary: cs.getPropertyValue("--primary-color").trim(),
-      primaryText: cs.getPropertyValue("--primary-text-color").trim(),
-      secondaryBackground: cs.getPropertyValue("--secondary-background-color").trim(),
-      primaryBackground: cs.getPropertyValue("--primary-background-color").trim()
+      primaryText: cs.getPropertyValue("--primary-text-color").trim()
     };
     const rc = (v2, def) => this._resolveColour(v2 ?? "", cs, def);
     this._faceColour = rc(this._config.face_colour, "#EDE0C4");
@@ -1383,7 +1378,7 @@ var WizardClockCard = class extends i4 {
     while (this._zones.length < this._minLocationSlots) {
       this._zones.push(" ");
     }
-    this._targetstate = this._buildTargetState();
+    this._targetstate = this._buildTargetState(cs);
     for (let i5 = 0; i5 < this._targetstate.length; i5++) {
       if (this._currentstate[i5]) {
         const t4 = this._targetstate[i5];
@@ -1555,7 +1550,7 @@ var WizardClockCard = class extends i4 {
       this._drawHand(hand);
     }
   }
-  _buildTargetState() {
+  _buildTargetState(cs) {
     const targets = [];
     for (let num = 0; num < this._config.wizards.length; num++) {
       const wizard = this._config.wizards[num];
@@ -1569,13 +1564,15 @@ var WizardClockCard = class extends i4 {
         }
       }
       const displayName = wizard.name || this.hass.states[wizard.entity]?.attributes?.friendly_name || wizard.entity;
+      const colour = wizard.colour ? this._resolveColour(wizard.colour, cs, this._colours.primary) : void 0;
+      const textcolour = wizard.textcolour ? this._resolveColour(wizard.textcolour, cs, this._colours.primaryText) : void 0;
       targets.push({
         pos: location * Math.PI / this._zones.length * 2,
         length: this._radius * 0.7,
         width: this._radius * 0.1,
         wizard: displayName,
-        colour: wizard.colour,
-        textcolour: wizard.textcolour
+        colour,
+        textcolour
       });
     }
     return targets;

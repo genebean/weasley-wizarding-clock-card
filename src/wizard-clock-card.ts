@@ -57,10 +57,8 @@ interface HandState {
 }
 
 interface ThemeColours {
-  primary: string;
+  primary:     string;
   primaryText: string;
-  secondaryBackground: string;
-  primaryBackground: string;
 }
 
 // ── Custom element ─────────────────────────────────────────────────────────────
@@ -113,10 +111,8 @@ class WizardClockCard extends LitElement {
   // CSS custom properties cascade through shadow DOM boundaries by spec, so
   // reading from `this` (the shadow host) gives HA's theme values correctly.
   private _colours: ThemeColours = {
-    primary: '',
+    primary:     '',
     primaryText: '',
-    secondaryBackground: '',
-    primaryBackground: '',
   };
 
   // Resolved config values — extracted once in setConfig() and after migration.
@@ -197,7 +193,6 @@ class WizardClockCard extends LitElement {
     this._travellingState  = this._config.travelling ?? 'Travelling';
     this._minLocationSlots = this._config.min_location_slots ?? 0;
     this._selectedFont     = this._config.fontName ?? 'Palatino Linotype, Palatino, Book Antiqua, serif';
-    this._shaftColour      = this._config.shaft_colour ?? '';
     this._exclude          = [...(this._config.exclude ?? [])];
     this._trackedEntities  = this._buildTrackedEntityList();
 
@@ -395,10 +390,8 @@ class WizardClockCard extends LitElement {
     // from the host element gives HA's current theme values.
     const cs = getComputedStyle(this);
     this._colours = {
-      primary:             cs.getPropertyValue('--primary-color').trim(),
-      primaryText:         cs.getPropertyValue('--primary-text-color').trim(),
-      secondaryBackground: cs.getPropertyValue('--secondary-background-color').trim(),
-      primaryBackground:   cs.getPropertyValue('--primary-background-color').trim(),
+      primary:     cs.getPropertyValue('--primary-color').trim(),
+      primaryText: cs.getPropertyValue('--primary-text-color').trim(),
     };
 
     // Resolve all configurable colours from config on every update so theme
@@ -435,7 +428,7 @@ class WizardClockCard extends LitElement {
 
     // Compute target hand positions once per state update so _drawTime() does
     // not allocate new objects on every animation frame.
-    this._targetstate = this._buildTargetState();
+    this._targetstate = this._buildTargetState(cs);
 
     // Sync non-animated hand properties (length, width, colours) to currentstate
     // so a canvas resize immediately redraws hands at the correct new dimensions.
@@ -663,7 +656,7 @@ class WizardClockCard extends LitElement {
     }
   }
 
-  private _buildTargetState(): HandState[] {
+  private _buildTargetState(cs: CSSStyleDeclaration): HandState[] {
     const targets: HandState[] = [];
     for (let num = 0; num < this._config.wizards.length; num++) {
       const wizard       = this._config.wizards[num];
@@ -682,13 +675,22 @@ class WizardClockCard extends LitElement {
         || (this.hass.states[wizard.entity]?.attributes as Record<string, unknown>)?.friendly_name as string | undefined
         || wizard.entity;
 
+      // Resolve colour tokens (e.g. "primary" from the ui_color picker) to
+      // actual CSS values now, so _drawHand() gets canvas-ready colour strings.
+      const colour     = wizard.colour
+        ? this._resolveColour(wizard.colour,     cs, this._colours.primary)
+        : undefined;
+      const textcolour = wizard.textcolour
+        ? this._resolveColour(wizard.textcolour, cs, this._colours.primaryText)
+        : undefined;
+
       targets.push({
         pos:        location * Math.PI / this._zones.length * 2,
         length:     this._radius * 0.7,
         width:      this._radius * 0.1,
         wizard:     displayName,
-        colour:     wizard.colour,
-        textcolour: wizard.textcolour,
+        colour,
+        textcolour,
       });
     }
     return targets;
