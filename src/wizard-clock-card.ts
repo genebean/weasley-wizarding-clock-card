@@ -31,7 +31,6 @@ export interface WizardConfig {
 export interface WizardClockCardConfig {
   wizards: WizardConfig[];
   locations?: string[];
-  width?: number;
   lost?: string;
   // Canonical British English spelling; migrateConfig() maps 'traveling' here.
   travelling?: string;
@@ -468,13 +467,11 @@ class WizardClockCard extends LitElement {
   }
 
   // Single source of truth for a wizard's current state string.
-  // Accepts a full WizardConfig (or a plain entity string for internal calls).
-  private _getWizardState(wizard: WizardConfig | string): string {
-    const entity = typeof wizard === 'string' ? wizard : wizard.entity;
-    const state  = this.hass.states[entity];
+  private _getWizardState(wizard: WizardConfig): string {
+    const state = this.hass.states[wizard.entity];
 
     if (!state) {
-      console.log(`${this._tag()}Wizard ${entity} does not exist.`);
+      console.log(`${this._tag()}Wizard ${wizard.entity} does not exist.`);
       return this._lostState;
     }
 
@@ -486,8 +483,7 @@ class WizardClockCard extends LitElement {
       (attrs.speed    as number | undefined) ??
       (attrs.moving ? 16 : 0);
 
-    const proxSensor = typeof wizard === 'string' ? null : wizard.proximity_sensor;
-    const proxState  = proxSensor ? this.hass.states[proxSensor] : undefined;
+    const proxState = wizard.proximity_sensor ? this.hass.states[wizard.proximity_sensor] : undefined;
     const isMovingByProximity =
       proxState && ['towards', 'away_from'].includes(proxState.state);
 
@@ -609,7 +605,6 @@ class WizardClockCard extends LitElement {
       // Flip text in the bottom half so it reads inward rather than upside-down.
       let startAngle   = 0;
       let inwardFacing = true;
-      const kerning    = 0;
       let text = this._zones[num].split('').reverse().join('');
 
       if (ang > Math.PI / 2 && ang < (Math.PI * 2) - (Math.PI / 2)) {
@@ -624,7 +619,7 @@ class WizardClockCard extends LitElement {
       // Character widths were pre-measured in _updateAndDraw(); look up from cache.
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        startAngle += ((charWid + (j === text.length - 1 ? 0 : kerning)) / (r - textHeight)) / 2;
+        startAngle += (charWid / (r - textHeight)) / 2;
       }
       ctx.rotate(startAngle);
 
@@ -632,7 +627,7 @@ class WizardClockCard extends LitElement {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         ctx.rotate((charWid / 2) / (r - textHeight) * -1);
         ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r + textHeight));
-        ctx.rotate((charWid / 2 + kerning) / (r - textHeight) * -1);
+        ctx.rotate((charWid / 2) / (r - textHeight) * -1);
       }
 
       ctx.restore();

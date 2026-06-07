@@ -1410,18 +1410,15 @@ var WizardClockCard = class extends i4 {
     if (DEBUG) console.log(`${this._tag()}update complete, zones: ${this._zones.join(", ")}`);
   }
   // Single source of truth for a wizard's current state string.
-  // Accepts a full WizardConfig (or a plain entity string for internal calls).
   _getWizardState(wizard) {
-    const entity = typeof wizard === "string" ? wizard : wizard.entity;
-    const state = this.hass.states[entity];
+    const state = this.hass.states[wizard.entity];
     if (!state) {
-      console.log(`${this._tag()}Wizard ${entity} does not exist.`);
+      console.log(`${this._tag()}Wizard ${wizard.entity} does not exist.`);
       return this._lostState;
     }
     const attrs = state.attributes;
     const stateVelo = attrs.velocity ?? attrs.speed ?? (attrs.moving ? 16 : 0);
-    const proxSensor = typeof wizard === "string" ? null : wizard.proximity_sensor;
-    const proxState = proxSensor ? this.hass.states[proxSensor] : void 0;
+    const proxState = wizard.proximity_sensor ? this.hass.states[wizard.proximity_sensor] : void 0;
     const isMovingByProximity = proxState && ["towards", "away_from"].includes(proxState.state);
     let stateStr = "not_home";
     if (state.state && state.state !== "off" && state.state !== "unknown") {
@@ -1514,7 +1511,6 @@ var WizardClockCard = class extends i4 {
       ctx.rotate(ang);
       let startAngle = 0;
       let inwardFacing = true;
-      const kerning = 0;
       let text = this._zones[num].split("").reverse().join("");
       if (ang > Math.PI / 2 && ang < Math.PI * 2 - Math.PI / 2) {
         startAngle = Math.PI;
@@ -1524,14 +1520,14 @@ var WizardClockCard = class extends i4 {
       if (this._isRtlLanguage(text)) text = text.split("").reverse().join("");
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        startAngle += (charWid + (j === text.length - 1 ? 0 : kerning)) / (r6 - textHeight) / 2;
+        startAngle += charWid / (r6 - textHeight) / 2;
       }
       ctx.rotate(startAngle);
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
         ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
         ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + textHeight));
-        ctx.rotate((charWid / 2 + kerning) / (r6 - textHeight) * -1);
+        ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
       }
       ctx.restore();
     }
