@@ -976,35 +976,38 @@ var init_wizard_clock_card_editor = __esm({
         </ha-expansion-panel>
 
         <!-- ── Locations ── -->
-        <div class="section-header">Locations</div>
-        <p class="hint">
-          Select zones to display on the clock face.
-          The zone's name becomes the location label.
-        </p>
-
-        ${locations.length > 0 ? b2`
-          <div class="location-list">
-            ${locations.map((loc, i5) => b2`
-              <div class="location-chip">
-                <span>${loc}</span>
-                <ha-icon-button
-                  .label=${"Remove"}
-                  @click=${() => this._removeLocation(i5)}
-                >
-                  <ha-icon icon="mdi:close"></ha-icon>
-                </ha-icon-button>
+        <ha-expansion-panel outlined>
+          <ha-icon slot="leading-icon" icon="mdi:map-marker-multiple"></ha-icon>
+          <h3 slot="header">Locations</h3>
+          <div class="content">
+            <p class="hint" style="margin: 0 0 8px;">
+              Select zones to display on the clock face.
+              The zone's name becomes the location label.
+            </p>
+            ${locations.length > 0 ? b2`
+              <div class="location-list">
+                ${locations.map((loc, i5) => b2`
+                  <div class="location-chip">
+                    <span>${loc}</span>
+                    <ha-icon-button
+                      .label=${"Remove"}
+                      @click=${() => this._removeLocation(i5)}
+                    >
+                      <ha-icon icon="mdi:close"></ha-icon>
+                    </ha-icon-button>
+                  </div>
+                `)}
               </div>
-            `)}
+            ` : A}
+            <ha-selector
+              .hass=${this.hass}
+              .selector=${ZONE_ENTITY_SELECTOR}
+              .value=${null}
+              placeholder="Add location from zone…"
+              @value-changed=${this._addLocationFromZone}
+            ></ha-selector>
           </div>
-        ` : A}
-
-        <ha-selector
-          .hass=${this.hass}
-          .selector=${ZONE_ENTITY_SELECTOR}
-          .value=${null}
-          placeholder="Add location from zone…"
-          @value-changed=${this._addLocationFromZone}
-        ></ha-selector>
+        </ha-expansion-panel>
 
         <!-- ── Advanced — ha-expansion-panel pattern from lovelace-mushroom ── -->
         <ha-expansion-panel outlined>
@@ -1033,15 +1036,8 @@ var init_wizard_clock_card_editor = __esm({
       gap: 12px;
     }
 
-    .section-header {
-      font-size: var(--ha-font-size-l, 1rem);
-      font-weight: var(--ha-font-weight-medium, 500);
-      color: var(--primary-text-color);
-      padding-top: 4px;
-    }
-
     .hint {
-      margin: -4px 0 0;
+      margin: 0;
       font-size: var(--ha-font-size-s, 0.875rem);
       color: var(--secondary-text-color);
     }
