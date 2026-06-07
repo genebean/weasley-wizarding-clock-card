@@ -128,7 +128,11 @@ class WizardClockCard extends LitElement {
   // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
   // Avoids measureText() calls on every animation frame in _drawNumbers().
   private _charWidthCache: Map<string, number> = new Map();
-  private _textHeight = 0;
+  private _labelFontSize = 0;
+  // Inward offset from r to the label text anchor (centre of glyph row).
+  // = ascent (scales with font) + fixed border clearance (r × 0.06).
+  // Used for both the text y-position and the arc-radius in _drawNumbers().
+  private _labelOffset = 0;
 
   // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -442,18 +446,50 @@ class WizardClockCard extends LitElement {
       }
     }
 
-    // Pre-measure all character widths at the label font size so _drawNumbers()
-    // can look them up from a Map instead of calling measureText() each frame.
+    // Pre-measure all character widths and compute the final label font size.
+    // Start at nominal size, then scale down if any label would overflow its
+    // arc segment — this prevents overlap when many locations are shown.
     this._ctx.save();
-    this._ctx.font = `${this._radius * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const nominalSize = this._radius * 0.15 * FONT_SCALE;
+    this._ctx.font = `${nominalSize}px ${this._selectedFont}`;
     const m = this._ctx.measureText('Mg');
-    this._textHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+    const nominalAscent = m.actualBoundingBoxAscent;
+
     this._charWidthCache.clear();
     for (const zone of this._zones) {
       for (const char of zone) {
         if (!this._charWidthCache.has(char)) {
           this._charWidthCache.set(char, this._ctx.measureText(char).width);
         }
+      }
+    }
+
+    // Label ring offset: ascent (scales with font) + fixed border clearance.
+    // 0.06r = 0.04r (border stroke half-width) + 0.02r visual gap.
+    // This keeps text-to-border gap consistent regardless of font size.
+    const nominalOffset = nominalAscent + this._radius * 0.06;
+
+    // Each zone occupies an equal arc at the label ring radius. Find the widest
+    // label to see if any would overflow its allocated arc segment.
+    const n = this._zones.length || 1;
+    const arcPerLabel = (2 * Math.PI * (this._radius - nominalOffset)) / n;
+    let maxLabelWidth = 0;
+    for (const zone of this._zones) {
+      const w = [...zone].reduce((s, ch) => s + (this._charWidthCache.get(ch) ?? 0), 0);
+      maxLabelWidth = Math.max(maxLabelWidth, w);
+    }
+
+    // Leave a 10% gap between adjacent labels; scale font down if needed.
+    // Width scales linearly with font size so we can rescale the cached values
+    // without re-running measureText() for every character.
+    const scale = maxLabelWidth > arcPerLabel * 0.9
+      ? (arcPerLabel * 0.9) / maxLabelWidth
+      : 1;
+    this._labelFontSize = nominalSize * scale;
+    this._labelOffset   = nominalAscent * scale + this._radius * 0.06;
+    if (scale < 1) {
+      for (const [ch, w] of this._charWidthCache) {
+        this._charWidthCache.set(ch, w * scale);
       }
     }
     this._ctx.restore();
@@ -588,10 +624,10 @@ class WizardClockCard extends LitElement {
   }
 
   private _drawNumbers(): void {
-    const ctx        = this._ctx!;
-    const r          = this._radius;
-    const textHeight = this._textHeight; // pre-measured in _updateAndDraw()
-    ctx.font         = `${r * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const ctx    = this._ctx!;
+    const r      = this._radius;
+    const offset = this._labelOffset; // ring inset: ascent + border clearance
+    ctx.font     = `${this._labelFontSize}px ${this._selectedFont}`;
     ctx.textBaseline = 'middle';
     ctx.textAlign    = 'center';
     ctx.fillStyle    = this._locationColour;
@@ -619,15 +655,15 @@ class WizardClockCard extends LitElement {
       // Character widths were pre-measured in _updateAndDraw(); look up from cache.
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        startAngle += (charWid / (r - textHeight)) / 2;
+        startAngle += (charWid / (r - offset)) / 2;
       }
       ctx.rotate(startAngle);
 
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        ctx.rotate((charWid / 2) / (r - textHeight) * -1);
-        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r + textHeight));
-        ctx.rotate((charWid / 2) / (r - textHeight) * -1);
+        ctx.rotate((charWid / 2) / (r - offset) * -1);
+        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r + offset));
+        ctx.rotate((charWid / 2) / (r - offset) * -1);
       }
 
       ctx.restore();

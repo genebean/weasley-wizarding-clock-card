@@ -1205,7 +1205,11 @@ var WizardClockCard = class extends i4 {
     // Text metrics cache — rebuilt in _updateAndDraw() when zones or radius change.
     // Avoids measureText() calls on every animation frame in _drawNumbers().
     this._charWidthCache = /* @__PURE__ */ new Map();
-    this._textHeight = 0;
+    this._labelFontSize = 0;
+    // Inward offset from r to the label text anchor (centre of glyph row).
+    // = ascent (scales with font) + fixed border clearance (r × 0.06).
+    // Used for both the text y-position and the arc-radius in _drawNumbers().
+    this._labelOffset = 0;
   }
   // ── HA lifecycle ─────────────────────────────────────────────────────────────
   // Called by HA before the element is connected. Throw to show an error card.
@@ -1390,15 +1394,32 @@ var WizardClockCard = class extends i4 {
       }
     }
     this._ctx.save();
-    this._ctx.font = `${this._radius * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const nominalSize = this._radius * 0.15 * FONT_SCALE;
+    this._ctx.font = `${nominalSize}px ${this._selectedFont}`;
     const m2 = this._ctx.measureText("Mg");
-    this._textHeight = m2.actualBoundingBoxAscent + m2.actualBoundingBoxDescent;
+    const nominalAscent = m2.actualBoundingBoxAscent;
     this._charWidthCache.clear();
     for (const zone of this._zones) {
       for (const char of zone) {
         if (!this._charWidthCache.has(char)) {
           this._charWidthCache.set(char, this._ctx.measureText(char).width);
         }
+      }
+    }
+    const nominalOffset = nominalAscent + this._radius * 0.06;
+    const n5 = this._zones.length || 1;
+    const arcPerLabel = 2 * Math.PI * (this._radius - nominalOffset) / n5;
+    let maxLabelWidth = 0;
+    for (const zone of this._zones) {
+      const w2 = [...zone].reduce((s4, ch) => s4 + (this._charWidthCache.get(ch) ?? 0), 0);
+      maxLabelWidth = Math.max(maxLabelWidth, w2);
+    }
+    const scale = maxLabelWidth > arcPerLabel * 0.9 ? arcPerLabel * 0.9 / maxLabelWidth : 1;
+    this._labelFontSize = nominalSize * scale;
+    this._labelOffset = nominalAscent * scale + this._radius * 0.06;
+    if (scale < 1) {
+      for (const [ch, w2] of this._charWidthCache) {
+        this._charWidthCache.set(ch, w2 * scale);
       }
     }
     this._ctx.restore();
@@ -1500,8 +1521,8 @@ var WizardClockCard = class extends i4 {
   _drawNumbers() {
     const ctx = this._ctx;
     const r6 = this._radius;
-    const textHeight = this._textHeight;
-    ctx.font = `${r6 * 0.15 * FONT_SCALE}px ${this._selectedFont}`;
+    const offset = this._labelOffset;
+    ctx.font = `${this._labelFontSize}px ${this._selectedFont}`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
     ctx.fillStyle = this._locationColour;
@@ -1520,14 +1541,14 @@ var WizardClockCard = class extends i4 {
       if (this._isRtlLanguage(text)) text = text.split("").reverse().join("");
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        startAngle += charWid / (r6 - textHeight) / 2;
+        startAngle += charWid / (r6 - offset) / 2;
       }
       ctx.rotate(startAngle);
       for (let j = 0; j < text.length; j++) {
         const charWid = this._charWidthCache.get(text[j]) ?? ctx.measureText(text[j]).width;
-        ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
-        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + textHeight));
-        ctx.rotate(charWid / 2 / (r6 - textHeight) * -1);
+        ctx.rotate(charWid / 2 / (r6 - offset) * -1);
+        ctx.fillText(text[j], 0, (inwardFacing ? 1 : -1) * (0 - r6 + offset));
+        ctx.rotate(charWid / 2 / (r6 - offset) * -1);
       }
       ctx.restore();
     }
