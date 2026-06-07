@@ -696,11 +696,14 @@ var WizardClockCard = class extends i4 {
     return 6;
   }
   // Tells HA's sections layout the default and minimum grid dimensions.
-  // 6×6 gives a roughly square card at medium size; user can drag-resize freely.
+  // columns: 12 spans the full section width.
+  // rows: 8 at the default HA row height (~56px) gives ~448px — roughly square
+  // for sections in the 400–500px wide range. The user can drag-resize freely;
+  // CSS aspect-ratio keeps the clock round at any card dimensions.
   getGridOptions() {
     return {
-      columns: 6,
-      rows: 6,
+      columns: 12,
+      rows: 8,
       min_columns: 2,
       min_rows: 2
     };
@@ -725,15 +728,17 @@ var WizardClockCard = class extends i4 {
       clearTimeout(this._resizeTimeout);
       this._resizeTimeout = setTimeout(() => {
         if (this.hass) this._updateAndDraw();
-      }, 500);
+      }, 100);
     });
-    this._resizeObserver.observe(this._haCard);
+    this._resizeObserver.observe(this);
   }
   // Called after every reactive update (hass change, _config change).
   updated(changedProps) {
     super.updated(changedProps);
-    if (changedProps.has("_config")) {
-      this._trackedEntities = this._buildTrackedEntityList();
+    if (changedProps.has("_config") || changedProps.has("layout")) {
+      if (changedProps.has("_config")) {
+        this._trackedEntities = this._buildTrackedEntityList();
+      }
       this._updateAndDraw();
       return;
     }
@@ -761,14 +766,16 @@ var WizardClockCard = class extends i4 {
   }
   // ── Drawing ───────────────────────────────────────────────────────────────────
   // Rebuilds zone/wizard state and kicks off the animation frame.
-  // Called on every hass update and on resize.
+  // Called on every relevant hass update and on resize.
   _updateAndDraw() {
     if (!this._haCard || !this._canvas || !this._ctx) return;
-    const availW = this._haCard.offsetWidth - 16;
-    const availH = this._haCard.offsetHeight - 16;
-    const size = Math.min(availW, availH > 0 ? availH : availW);
+    const pad = 16;
+    const availW = this.offsetWidth - pad;
+    const availH = this.offsetHeight - pad;
+    const size = availH > 50 && availH < availW ? availH : availW;
     if (size <= 0) {
-      if (DEBUG) console.log(`${this._tag()}skipping update \u2014 size ${size}`);
+      if (DEBUG) console.log(`${this._tag()}size=0, retrying after layout`);
+      requestAnimationFrame(() => this._updateAndDraw());
       return;
     }
     this._canvas.width = size;
@@ -1041,28 +1048,50 @@ var WizardClockCard = class extends i4 {
 };
 // ── Styles ──────────────────────────────────────────────────────────────────
 // Scoped styles apply to this shadow root only.
-// :host height: 100% ensures the element fills the grid cell HA allocates.
-// ha-card height: 100% ensures it fills the host rather than collapsing to
-// canvas height, so the card respects the rows set in getGridOptions().
+//
+// ha-card { height: 100% } fills the CSS Grid cell in sections layout.
+// In masonry, :host has no definite height so 100% resolves to auto,
+// making ha-card content-size to the canvas — same as before.
+// .clock-container { height: 100% } ensures ha-card's full interior is
+// covered by the card background (no white gap outside ha-card).
+// Canvas display size is driven by JS in _updateAndDraw().
 WizardClockCard.styles = i`
     :host {
       display: block;
+      /* In sections layout hui-grid-section gives the .card wrapper an explicit
+         height. height: 100% here propagates that into our shadow DOM so that
+         ha-card { height: 100% } can resolve to a definite value. In masonry
+         the wrapper has no explicit height so this resolves to auto, which
+         content-sizes to the canvas — the same as before. */
       height: 100%;
     }
     ha-card {
       height: 100%;
-      box-sizing: border-box;
+      overflow: hidden;
     }
     .clock-container {
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      /* Start at 0 so masonry offsetHeight stays near 0 before JS runs.
+         JS overrides these via canvas.style.width/height. */
+      width: 0;
+      height: 0;
     }
   `;
 __decorateClass([
   n4({ attribute: false })
 ], WizardClockCard.prototype, "hass", 2);
+__decorateClass([
+  n4({ type: String })
+], WizardClockCard.prototype, "layout", 2);
 __decorateClass([
   r5()
 ], WizardClockCard.prototype, "_config", 2);

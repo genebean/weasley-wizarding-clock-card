@@ -63,6 +63,12 @@ class WizardClockCard extends LitElement {
   // triggers updated() automatically, replacing the manual set hass() setter.
   @property({ attribute: false }) public hass!: HomeAssistant;
 
+  // Set by HA to indicate the current layout context.
+  // 'grid' = sections layout (both width and height are grid-allocated).
+  // 'masonry' or undefined = masonry layout (height is content-driven).
+  // Used to decide whether to constrain canvas by height or width only.
+  @property({ type: String }) public layout?: string;
+
   @state() private _config!: WizardClockCardConfig;
 
   // References to DOM elements rendered by render().
@@ -116,23 +122,42 @@ class WizardClockCard extends LitElement {
   // ── Styles ──────────────────────────────────────────────────────────────────
 
   // Scoped styles apply to this shadow root only.
-  // :host height: 100% ensures the element fills the grid cell HA allocates.
-  // ha-card height: 100% ensures it fills the host rather than collapsing to
-  // canvas height, so the card respects the rows set in getGridOptions().
+  //
+  // ha-card { height: 100% } fills the CSS Grid cell in sections layout.
+  // In masonry, :host has no definite height so 100% resolves to auto,
+  // making ha-card content-size to the canvas — same as before.
+  // .clock-container { height: 100% } ensures ha-card's full interior is
+  // covered by the card background (no white gap outside ha-card).
+  // Canvas display size is driven by JS in _updateAndDraw().
   static styles = css`
     :host {
       display: block;
+      /* In sections layout hui-grid-section gives the .card wrapper an explicit
+         height. height: 100% here propagates that into our shadow DOM so that
+         ha-card { height: 100% } can resolve to a definite value. In masonry
+         the wrapper has no explicit height so this resolves to auto, which
+         content-sizes to the canvas — the same as before. */
       height: 100%;
     }
     ha-card {
       height: 100%;
-      box-sizing: border-box;
+      overflow: hidden;
     }
     .clock-container {
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      /* Start at 0 so masonry offsetHeight stays near 0 before JS runs.
+         JS overrides these via canvas.style.width/height. */
+      width: 0;
+      height: 0;
     }
   `;
 
@@ -175,11 +200,14 @@ class WizardClockCard extends LitElement {
   }
 
   // Tells HA's sections layout the default and minimum grid dimensions.
-  // 6×6 gives a roughly square card at medium size; user can drag-resize freely.
+  // columns: 12 spans the full section width.
+  // rows: 8 at the default HA row height (~56px) gives ~448px — roughly square
+  // for sections in the 400–500px wide range. The user can drag-resize freely;
+  // CSS aspect-ratio keeps the clock round at any card dimensions.
   getGridOptions() {
     return {
-      columns:     6,
-      rows:        6,
+      columns:     12,
+      rows:        8,
       min_columns: 2,
       min_rows:    2,
     };
@@ -204,24 +232,27 @@ class WizardClockCard extends LitElement {
     if (!ctx) throw new Error(`Browser does not support ${CARDNAME} canvas.`);
     this._ctx = ctx;
 
-    // Watch the ha-card for size changes (e.g. window resize, HA grid
-    // reflow) and redraw with the new dimensions after a debounce.
+    // Watch the host element for size changes (window resize, HA grid reflow).
+    // Sizing reads this.offsetWidth/offsetHeight so observing the host is the
+    // correct target — observing the canvas would create a feedback loop where
+    // our own buffer writes trigger new observer notifications.
     this._resizeObserver = new ResizeObserver(() => {
       clearTimeout(this._resizeTimeout);
       this._resizeTimeout = setTimeout(() => {
         if (this.hass) this._updateAndDraw();
-      }, 500);
+      }, 100);
     });
-    this._resizeObserver.observe(this._haCard);
+    this._resizeObserver.observe(this);
   }
 
   // Called after every reactive update (hass change, _config change).
   protected updated(changedProps: PropertyValues): void {
     super.updated(changedProps);
 
-    if (changedProps.has('_config')) {
-      // Config changed — rebuild the watch list and do a full redraw.
-      this._trackedEntities = this._buildTrackedEntityList();
+    if (changedProps.has('_config') || changedProps.has('layout')) {
+      if (changedProps.has('_config')) {
+        this._trackedEntities = this._buildTrackedEntityList();
+      }
       this._updateAndDraw();
       return;
     }
@@ -257,25 +288,36 @@ class WizardClockCard extends LitElement {
   // ── Drawing ───────────────────────────────────────────────────────────────────
 
   // Rebuilds zone/wizard state and kicks off the animation frame.
-  // Called on every hass update and on resize.
+  // Called on every relevant hass update and on resize.
   private _updateAndDraw(): void {
     if (!this._haCard || !this._canvas || !this._ctx) return;
 
-    // Size the canvas to the smaller of width and height so the circle always
-    // fits and stays round regardless of how the user resizes the card.
-    const availW = this._haCard.offsetWidth  - 16;
-    const availH = this._haCard.offsetHeight - 16;
-    const size   = Math.min(availW, availH > 0 ? availH : availW);
+    // Canvas starts at 0×0 (CSS), so in masonry this.offsetHeight is near 0
+    // before JS sizes us, and ≈ canvas width after — both cases fall through
+    // to width-only. In sections layout CSS Grid gives the host a definite
+    // height (independent of canvas content), so availH is the real grid
+    // allocation and we constrain the clock to fit. The 50px floor filters
+    // out host border/padding that could produce a small non-zero offsetHeight
+    // in masonry before the first sizing pass.
+    const pad    = 16;
+    const availW = this.offsetWidth  - pad;
+    const availH = this.offsetHeight - pad;
+    const size = (availH > 50 && availH < availW) ? availH : availW;
 
     if (size <= 0) {
-      if (DEBUG) console.log(`${this._tag()}skipping update — size ${size}`);
+      // Host hasn't been laid out yet. Retry next frame; RAF won't fire on
+      // inactive tabs so this won't loop while the card is off-screen.
+      if (DEBUG) console.log(`${this._tag()}size=0, retrying after layout`);
+      requestAnimationFrame(() => this._updateAndDraw());
       return;
     }
 
-    // Setting canvas width/height resets the context, including all transforms.
+    // Setting canvas.width/height resets the context, including all transforms.
     // The translate to centre must happen immediately after.
     this._canvas.width        = size;
     this._canvas.height       = size;
+    // Explicitly set CSS display size so the canvas doesn't scale up from its
+    // default 300×150 intrinsic size before JS runs.
     this._canvas.style.width  = `${size}px`;
     this._canvas.style.height = `${size}px`;
 
