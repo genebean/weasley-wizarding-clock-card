@@ -203,7 +203,10 @@ interface WizardClockCardConfig {
   header?: string;
   fontName?: string;             // CSS font-family
   fontface?: string;             // raw @font-face CSS (expert)
-  shaft_colour?: string;         // hex or named colour
+  shaft_colour?:    string;         // hand+hinge colour (hex or token); default #1a1a1a
+  face_colour?:     string;         // clock face background; default #EDE0C4
+  location_colour?: string;         // location label text; default #1a1a1a
+  border_colour?:   string;         // face ring; default #1a1a1a
   exclude?: string[];
 }
 
