@@ -20,7 +20,7 @@ const _injectedFontFaces = new Set<string>();
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface WizardConfig {
+export interface WizardConfig {
   entity: string;
   name: string;
   colour?: string;
@@ -28,7 +28,7 @@ interface WizardConfig {
   proximity_sensor?: string;
 }
 
-interface WizardClockCardConfig {
+export interface WizardClockCardConfig {
   wizards: WizardConfig[];
   locations?: string[];
   width?: number;
@@ -207,6 +207,24 @@ class WizardClockCard extends LitElement {
     }
   }
 
+  // Returns the editor element HA shows in the card editor dialog.
+  // Dynamic import keeps editor code out of the critical render path —
+  // it is only parsed when someone actually opens the card editor.
+  static async getConfigElement() {
+    await import('./wizard-clock-card-editor');
+    return document.createElement(`${CARDNAME}-editor`);
+  }
+
+  // Minimal valid config shown in the "Add Card" dialog preview.
+  // HA always provides hass when calling this for custom cards.
+  static getStubConfig(hass: HomeAssistant): WizardClockCardConfig {
+    const entity = Object.keys(hass.states).find(id => id.startsWith('person.')) ?? '';
+    const name   = entity
+      ? ((hass.states[entity].attributes as Record<string, unknown>).friendly_name as string ?? 'Wizard')
+      : 'Wizard';
+    return { wizards: [{ entity, name }] };
+  }
+
   // Tells HA how many 50px rows the card occupies (used by masonry layout).
   getCardSize(): number {
     return 6;
@@ -223,6 +241,7 @@ class WizardClockCard extends LitElement {
       rows:        7,
       min_columns: 2,
       min_rows:    2,
+      max_rows:    8,
     };
   }
 
@@ -621,11 +640,15 @@ class WizardClockCard extends LitElement {
         }
       }
 
+      const displayName = wizard.name
+        || (this.hass.states[wizard.entity]?.attributes as Record<string, unknown>)?.friendly_name as string | undefined
+        || wizard.entity;
+
       targets.push({
         pos:        location * Math.PI / this._zones.length * 2,
         length:     this._radius * 0.7,
         width:      this._radius * 0.1,
-        wizard:     wizard.name,
+        wizard:     displayName,
         colour:     wizard.colour,
         textcolour: wizard.textcolour,
       });
@@ -651,11 +674,15 @@ class WizardClockCard extends LitElement {
     ctx.quadraticCurveTo(-hand.width,       -hand.length * 0.5,  0,            0);
     ctx.fill();
 
-    ctx.font      = `${hand.width * FONT_SCALE}px ${this._selectedFont}`;
-    ctx.fillStyle = hand.textcolour ?? this._colours.primaryText;
-    ctx.translate(0, -hand.length / 2);
+    ctx.font         = `${hand.width * FONT_SCALE}px ${this._selectedFont}`;
+    ctx.fillStyle    = hand.textcolour ?? this._colours.primaryText;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign    = 'left';
+    // Anchor at the widest flare point (75% from hinge toward tip).
+    // After rotate(PI/2), local +x points toward the hinge for every hand.pos,
+    // so text always reads from the flare inward — no per-quadrant flip needed.
+    ctx.translate(0, -hand.length * 0.75);
     ctx.rotate(Math.PI / 2);
-    if (hand.pos >= 0 && hand.pos < Math.PI) ctx.rotate(Math.PI);
     ctx.fillText(hand.wizard, 0, 0);
     ctx.restore();
   }
@@ -703,6 +730,16 @@ class WizardClockCard extends LitElement {
     return c as WizardClockCardConfig;
   }
 }
+
+// ── customCards registration ───────────────────────────────────────────────────
+
+(window as typeof window & { customCards?: Record<string, unknown>[] }).customCards ??= [];
+(window as typeof window & { customCards?: Record<string, unknown>[] }).customCards!.push({
+  type:        CARDNAME,
+  name:        'Wizard Clock Card',
+  description: 'Harry Potter-style location clock for Home Assistant',
+  preview:     true,
+});
 
 // Ensure the TypeScript compiler knows about the custom element tag name.
 declare global {
