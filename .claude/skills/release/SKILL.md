@@ -40,9 +40,11 @@ Confirm `weasley-wizarding-clock-card.js` is updated and type-checks pass:
 
     nix develop --command npm run typecheck
 
-### Step 5 — Commit everything
+### Step 5 — Run pre-commit and commit everything
 
-Single commit, all changed files:
+    pre-commit run -a
+
+Fix any issues, then commit all changed files in a single commit:
 
     chore: release vX.Y.Z
 
@@ -50,8 +52,8 @@ Single commit, all changed files:
 
     git tag vX.Y.Z
 
-WARNING: Do NOT push the tag yet. Pushing the tag triggers the release workflow
-on a moving target if CI hasn't passed.
+The tag can be pushed at any time — it does NOT trigger the release workflow
+on its own. Hold it until after CI passes and the PR is merged.
 
 ### Step 7 — Open the PR
 
@@ -73,10 +75,6 @@ Wait for CI to pass. If `nix build` fails with a hash mismatch:
 
     git push origin vX.Y.Z
 
-WARNING: Do NOT use `git push --tags` — push only the specific tag by name.
-Pushing the tag triggers the release workflow, which builds `weasley-wizarding-clock-card.js`
-and attaches it to the GitHub release automatically.
-
 ### Step 10 — Create the GitHub release
 
     gh release create vX.Y.Z \
@@ -84,7 +82,8 @@ and attaches it to the GitHub release automatically.
       --title "vX.Y.Z" \
       --generate-notes
 
-The release workflow will attach `weasley-wizarding-clock-card.js` to it within ~1 minute.
+This is what triggers the release workflow (`release: types: [published]`).
+The workflow builds and attaches `weasley-wizarding-clock-card.js` within ~1 minute.
 HACS users will then see the update.
 
 ### Step 11 — Clean up
@@ -105,6 +104,7 @@ Delete the local release branch:
 - [ ] `npmDepsHash` recomputed and updated in `flake.nix`
 - [ ] `weasley-wizarding-clock-card.js` rebuilt (prod build)
 - [ ] `npm run typecheck` passes
+- [ ] `pre-commit run -a` passes
 - [ ] Single `chore: release vX.Y.Z` commit
 - [ ] Tag created locally (not pushed)
 - [ ] PR open and CI green
