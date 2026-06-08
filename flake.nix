@@ -25,13 +25,13 @@
         # `nix build` — produces weasley-clock-card.js in result/
         packages.default = pkgs.buildNpmPackage {
           pname = "weasley-clock-card";
-          version = "0.9.0";
+          version = "0.10.0";
           src = ./.;
           nodejs = pkgs.nodejs_24;
 
           # Recompute this hash after any package-lock.json change:
           #   nix run nixpkgs#prefetch-npm-deps package-lock.json
-          npmDepsHash = "sha256-7qa+nViy2XhxhRH0oPnDtihcOBVdia6HDIyiyKih93E=";
+          npmDepsHash = "sha256-d/OVc9Hpb5NINuZKmu6JiFque5sCl8Z6oq84oGxYlmw=";
 
           buildPhase = "npm run build";
           installPhase = ''

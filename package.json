@@ -1,6 +1,6 @@
 {
   "name": "weasley-clock-card",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Harry Potter-style location clock for Home Assistant Lovelace",
   "type": "module",
   "scripts": {

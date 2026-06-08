@@ -1164,7 +1164,7 @@ var init_wizard_clock_card_editor = __esm({
 // src/wizard-clock-card.ts
 init_lit();
 init_decorators();
-var VERSION = "0.9.0";
+var VERSION = "0.10.0";
 var DEBUG = false;
 var FONT_SCALE = 1.1;
 var _injectedFontFaces = /* @__PURE__ */ new Set();

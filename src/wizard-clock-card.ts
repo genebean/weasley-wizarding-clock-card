@@ -8,7 +8,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 //   Dev:        --define:CARDNAME='"wizard-clock-card-dev"'
 declare const CARDNAME: string;
 
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 
 const DEBUG = false;
 
