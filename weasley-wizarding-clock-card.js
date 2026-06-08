@@ -1736,7 +1736,7 @@ WizardClockCard = __decorateClass([
 window.customCards ??= [];
 window.customCards.push({
   type: "weasley-wizarding-clock-card",
-  name: "Wizard Clock Card",
+  name: "Weasley Wizarding Clock",
   description: "Harry Potter-style location clock for Home Assistant",
   preview: true
 });
