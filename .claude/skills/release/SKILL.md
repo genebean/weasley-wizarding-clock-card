@@ -11,7 +11,13 @@ Execute the release workflow exactly. Do not skip or reorder steps.
 Ask the owner for the new version (e.g. `0.12.0`) if not already provided.
 All files must end up with matching versions.
 
-### Step 2 — Bump versions in all files
+### Step 2 — Create and switch to the release branch
+
+    git checkout -b release/vX.Y.Z
+
+All work happens on this branch. The PR merges it into main.
+
+### Step 3 — Bump versions in all files
 
 Edit these in a single commit — all must match:
 
@@ -25,14 +31,14 @@ Edit these in a single commit — all must match:
 
 Also check `package-lock.json` `"name"` field — must be `weasley-wizarding-clock-card`.
 
-### Step 3 — Recompute npmDepsHash
+### Step 4 — Recompute npmDepsHash
 
     nix run nixpkgs#prefetch-npm-deps package-lock.json
 
 Copy the printed `sha256-...` value into `flake.nix` as `npmDepsHash`.
 This must be done any time `package-lock.json` changes — including a version-only bump.
 
-### Step 4 — Build the prod JS and verify
+### Step 5 — Build the prod JS and verify
 
     nix develop --command npm run build
 
@@ -40,7 +46,7 @@ Confirm `weasley-wizarding-clock-card.js` is updated and type-checks pass:
 
     nix develop --command npm run typecheck
 
-### Step 5 — Run pre-commit and commit everything
+### Step 6 — Run pre-commit and commit everything
 
     pre-commit run -a
 
@@ -48,14 +54,18 @@ Fix any issues, then commit all changed files in a single commit:
 
     chore: release vX.Y.Z
 
-### Step 6 — Tag locally only
+### Step 7 — Tag locally only
 
     git tag vX.Y.Z
 
 The tag can be pushed at any time — it does NOT trigger the release workflow
 on its own. Hold it until after CI passes and the PR is merged.
 
-### Step 7 — Open the PR
+### Step 8 — Open the PR
+
+Push the release branch and open the PR targeting main:
+
+    git push -u origin release/vX.Y.Z
 
 Wait for CI to pass. If `nix build` fails with a hash mismatch:
 1. Re-run `prefetch-npm-deps`
@@ -67,15 +77,15 @@ Wait for CI to pass. If `nix build` fails with a hash mismatch:
 
 ## Post-merge
 
-### Step 8 — Pull main
+### Step 9 — Pull main
 
     git checkout main && git pull
 
-### Step 9 — Push the tag
+### Step 10 — Push the tag
 
     git push origin vX.Y.Z
 
-### Step 10 — Create the GitHub release
+### Step 11 — Create the GitHub release
 
     gh release create vX.Y.Z \
       --repo genebean/weasley-wizarding-clock-card \
@@ -86,7 +96,7 @@ This is what triggers the release workflow (`release: types: [published]`).
 The workflow builds and attaches `weasley-wizarding-clock-card.js` within ~1 minute.
 HACS users will then see the update.
 
-### Step 11 — Clean up
+### Step 12 — Clean up
 
 Delete the local release branch:
 
@@ -96,6 +106,7 @@ Delete the local release branch:
 
 ## Checklist
 
+- [ ] Release branch `release/vX.Y.Z` created and checked out
 - [ ] Version bumped in `package.json`
 - [ ] Version bumped in BOTH places in `package-lock.json`
 - [ ] Name is `weasley-wizarding-clock-card` in BOTH places in `package-lock.json`
