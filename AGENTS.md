@@ -1,8 +1,13 @@
-# AGENTS.md — wizard-clock-card
+# AGENTS.md — weasley-clock-card
 
 Harry Potter-style location clock for Home Assistant Lovelace. Shows family
 members (called "wizards") as clock hands pointing to their current location
 zone. Styled after the Weasley family clock from the books.
+
+Published on HACS as **Weasley Clock Card** (`custom:weasley-clock-card`).
+The source files use `wizard-clock-card` as the base filename (upstream
+heritage); the `CARDNAME` constant baked in at build time controls the HA
+element name.
 
 This file is self-contained. It does not rely on any parent AGENTS.md.
 
@@ -28,13 +33,24 @@ application developer**. When working on this code:
 
 ```
 src/
-  wizard-clock-card.ts       # Main card element (LitElement + canvas)
+  wizard-clock-card.ts        # Main card element (LitElement + canvas)
   wizard-clock-card-editor.ts # Card editor element (HA card editor dialog)
-wizard-clock-card.js         # Prod build (element: wizard-clock-card)
-wizard-clock-card-dev.js     # Dev build  (element: wizard-clock-card-dev)
-flake.nix                    # Nix dev shell + nix build package
-package.json                 # npm scripts (build, build:dev, watch, watch:dev)
+weasley-clock-card.js         # Prod build — committed, used by HACS
+flake.nix                     # Nix dev shell + nix build package
+package.json                  # npm scripts (build, build:dev, typecheck, etc.)
 tsconfig.json
+AGENTS.md                     # Architecture, conventions, and agent guidance
+info.md                       # HACS store display page (user docs)
+.pre-commit-config.yaml       # Pre-commit hooks (linting, type check)
+.github/workflows/ci.yml      # CI: pre-commit, typecheck, nix-build, HACS validate
+.github/workflows/release.yml # Release: attach built JS to GitHub release
+.github/renovate.json         # Renovate dependency update config
+```
+
+Generated files (gitignored — never commit):
+```
+weasley-clock-card-dev.js   # dev build (element: weasley-clock-card-dev)
+wizard-clock-card.js        # upstream-compat build (element: wizard-clock-card)
 ```
 
 ---
@@ -53,13 +69,15 @@ inside `nix develop`.
 
 ## Build Commands
 
-Two separate bundles with different `CARDNAME` constants baked in at build time.
-The constant controls the custom element name HA looks for.
+Three separate bundles with different `CARDNAME` constants baked in at build
+time. The constant controls the custom element name HA looks for.
 
-| Command | Output file | Element name |
-|---|---|---|
-| `npm run build` | `wizard-clock-card.js` | `wizard-clock-card` |
-| `npm run build:dev` | `wizard-clock-card-dev.js` | `wizard-clock-card-dev` |
+| Command | Output file | Element name | Purpose |
+|---|---|---|---|
+| `npm run build` | `weasley-clock-card.js` | `weasley-clock-card` | Prod / HACS release |
+| `npm run build:dev` | `weasley-clock-card-dev.js` | `weasley-clock-card-dev` | Local HA dev testing |
+| `npm run build:upstream` | `wizard-clock-card.js` | `wizard-clock-card` | Upstream PR testing |
+| `npm run typecheck` | (no output) | — | Type-check only, no emit |
 
 **CRITICAL — never copy one built file over the other.** Copying the prod build
 over the dev file registers the wrong element name, breaking all existing dev
@@ -75,8 +93,12 @@ nix develop --command npm run build:dev
 Only run `npm run build` (prod) when cutting an actual release — not during
 feature work. The prod file should not be updated until dev is ready to ship.
 
-`nix build` (the Nix package build) produces `wizard-clock-card.js` in
+`nix build` (the Nix package build) produces `weasley-clock-card.js` in
 `result/` and is used for release packaging — same rule applies.
+
+`build:upstream` is gitignored. Use it only when preparing an upstream PR to
+`malcolmrigg/wizard-clock-card` — it produces a file with the upstream element
+name for compatibility testing. Do not commit it.
 
 ---
 
@@ -84,8 +106,9 @@ feature work. The prod file should not be updated until dev is ready to ship.
 
 ### Card element (`wizard-clock-card.ts`)
 
-- `WizardClockCard extends LitElement` — registered as `wizard-clock-card` (or
-  `wizard-clock-card-dev` in dev builds) via `@customElement(CARDNAME)`
+- `WizardClockCard extends LitElement` — registered as `weasley-clock-card`
+  (prod), `weasley-clock-card-dev` (dev), or `wizard-clock-card` (upstream
+  compat) via `@customElement(CARDNAME)` — baked in at build time
 - Renders an `<ha-card>` containing a single `<canvas>`
 - Canvas is sized by JS in `_updateAndDraw()`, not CSS. CSS initialises it to
   `width: 0; height: 0` so masonry layout doesn't see canvas intrinsic size
@@ -112,8 +135,8 @@ if (size <= 0) { requestAnimationFrame(() => this._updateAndDraw()); return; }
 
 ### Editor element (`wizard-clock-card-editor.ts`)
 
-- `WizardClockCardEditor extends LitElement` — registered as
-  `${CARDNAME}-editor`
+- `WizardClockCardEditor extends LitElement` — registered as `${CARDNAME}-editor`
+  (e.g. `weasley-clock-card-editor` in prod)
 - Fires `config-changed` custom events; HA calls `setConfig()` in response
 - Uses HA-native components exclusively (`ha-form`, `ha-expansion-panel`,
   `ha-selector`, `ha-icon-button`, `ha-alert`, `ha-button`)
@@ -232,14 +255,13 @@ interface WizardConfig {
   includes UI behaviour requiring visual verification in HA. Report what changed
   and what to look at, then wait.
 - Do not bundle unrelated changes in a single commit.
-- When writing `gh pr create` or `gh pr edit` bodies with backticks, use
-  `PREOF` (not `EOF`) as the heredoc delimiter to avoid shell interpretation.
 
 ---
 
 ## Pre-push Verification
 
 - Run `npm run build:dev` before pushing during feature work
+- Run `npm run typecheck` to catch TypeScript errors without a full build
 - Only run `npm run build` and `nix build` when cutting a release
 - Run `nix build` when `flake.nix`, `package.json`, or `package-lock.json`
   changes (release time only)
@@ -248,13 +270,60 @@ interface WizardConfig {
 
 ---
 
+## CI and Pre-commit
+
+### Pre-commit hooks (`.pre-commit-config.yaml`)
+
+Run `pre-commit install` after cloning. Hooks run on every `git commit`:
+
+- Standard hygiene: trailing whitespace, end-of-file newline, merge conflict
+  markers, large files (>500 KB), valid JSON, valid YAML
+- `nix fmt` — formats Nix files
+- `deadnix` — flags unused Nix bindings (`nix run nixpkgs#deadnix`)
+- `npm run typecheck` — TypeScript type check (no emit); runs inside
+  `nix develop --command` so no host-level tools required
+
+Run hooks manually: `pre-commit run --all-files`
+
+### GitHub Actions CI (`.github/workflows/ci.yml`)
+
+Triggers on push and PR to `main`. Jobs:
+
+| Job | What it does |
+|---|---|
+| `pre-commit` | Runs all pre-commit hooks |
+| `typecheck` | `nix develop --command npm run typecheck` |
+| `nix-build` | Full `nix build` with flake-checker |
+| `npm-audit` | `npm audit --audit-level=critical` |
+| `dependency-review` | GitHub dependency review on PRs |
+| `hacs-validate` | `hacs/action` — HACS plugin validation |
+
+### Release workflow (`.github/workflows/release.yml`)
+
+Triggers when a GitHub Release is published. Builds `weasley-clock-card.js`
+(prod) and attaches it to the release as a downloadable asset. HACS downloads
+this asset for users.
+
+### Renovate (`.github/renovate.json`)
+
+Renovate Bot opens PRs weekly (Monday before 06:00 ET) for:
+- npm dependency updates
+- GitHub Actions version bumps (grouped into one PR)
+
+Nix inputs are handled separately by the `update-flake-lock` workflow.
+
+---
+
 ## Git Branch Workflow
 
-- Current feature branch: `ui-v2` (visual card editor work)
-- Main branch: `master`
-- Start new work from a fresh master: `git checkout master && git pull`, then
-  `git checkout -b <branch-name>`
+- Main branch: `main`
+- Start new work: `git checkout main && git pull`, then `git checkout -b <branch-name>`
 - Delete merged branches locally after the PR merges
+- When writing `gh pr create` or `gh pr edit` bodies with backticks, use
+  `PREOF` (not `EOF`) as the heredoc delimiter to avoid shell interpretation
+- This repo is a fork of `malcolmrigg/wizard-clock-card`. Use
+  `--repo genebean/weasley-clock-card` with `gh pr create` — without it, `gh`
+  may default to creating the PR against the upstream fork
 
 ---
 

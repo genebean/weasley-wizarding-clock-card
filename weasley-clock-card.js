@@ -323,7 +323,7 @@ var init_lit_html = __esm({
     v = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g;
     _ = /-->/g;
     m = />/g;
-    p2 = RegExp(`>|${f2}(?:([^\\s"'>=/]+)(${f2}*=${f2}*(?:[^ 	
+    p2 = RegExp(`>|${f2}(?:([^\\s"'>=/]+)(${f2}*=${f2}*(?:[^
 \f\r"'\`<>=]|("|')|))|$)`, "g");
     g = /'/g;
     $ = /"/g;
@@ -1156,7 +1156,7 @@ var init_wizard_clock_card_editor = __esm({
       r5()
     ], WizardClockCardEditor.prototype, "_wizardsExpanded", 2);
     WizardClockCardEditor = __decorateClass([
-      t3(`${"wizard-clock-card-dev"}-editor`)
+      t3(`${"weasley-clock-card"}-editor`)
     ], WizardClockCardEditor);
   }
 });
@@ -1217,7 +1217,7 @@ var WizardClockCard = class extends i4 {
     console.info(
       "%c %s %c %s",
       "color: white; background: forestgreen; font-weight: 700;",
-      "wizard-clock-card-dev".toUpperCase(),
+      "weasley-clock-card".toUpperCase(),
       "color: forestgreen; background: white; font-weight: 700;",
       VERSION
     );
@@ -1241,7 +1241,7 @@ var WizardClockCard = class extends i4 {
   // it is only parsed when someone actually opens the card editor.
   static async getConfigElement() {
     await Promise.resolve().then(() => (init_wizard_clock_card_editor(), wizard_clock_card_editor_exports));
-    return document.createElement(`${"wizard-clock-card-dev"}-editor`);
+    return document.createElement(`${"weasley-clock-card"}-editor`);
   }
   // Minimal valid config shown in the "Add Card" dialog preview.
   // HA always provides hass when calling this for custom cards.
@@ -1282,7 +1282,7 @@ var WizardClockCard = class extends i4 {
   // Safe to query elements and set up observers here.
   firstUpdated() {
     const ctx = this._canvas.getContext("2d");
-    if (!ctx) throw new Error(`Browser does not support ${"wizard-clock-card-dev"} canvas.`);
+    if (!ctx) throw new Error(`Browser does not support ${"weasley-clock-card"} canvas.`);
     this._ctx = ctx;
     this._resizeObserver = new ResizeObserver(() => {
       clearTimeout(this._resizeTimeout);
@@ -1731,11 +1731,11 @@ __decorateClass([
   e5("canvas")
 ], WizardClockCard.prototype, "_canvas", 2);
 WizardClockCard = __decorateClass([
-  t3("wizard-clock-card-dev")
+  t3("weasley-clock-card")
 ], WizardClockCard);
 window.customCards ??= [];
 window.customCards.push({
-  type: "wizard-clock-card-dev",
+  type: "weasley-clock-card",
   name: "Wizard Clock Card",
   description: "Harry Potter-style location clock for Home Assistant",
   preview: true
