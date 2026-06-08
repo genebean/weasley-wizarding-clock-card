@@ -17,6 +17,6 @@
   "devDependencies": {
     "custom-card-helpers": "^1.9.0",
     "esbuild": "^0.25.0",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.0"
   }
 }
