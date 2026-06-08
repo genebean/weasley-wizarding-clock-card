@@ -1,4 +1,4 @@
-# Weasley Clock Card
+# Weasley Wizarding Clock Card
 
 A Harry Potter-style Weasley family clock for Home Assistant Lovelace. Family
 members appear as animated clock hands pointing to their current location zone.
@@ -10,7 +10,7 @@ members appear as animated clock hands pointing to their current location zone.
 > maintained in the interim.
 
 For installation instructions and the full config reference, see the
-[HACS store page](https://my.home-assistant.io/redirect/hacs_repository/?owner=genebean&repository=weasley-clock-card)
+[HACS store page](https://my.home-assistant.io/redirect/hacs_repository/?owner=genebean&repository=weasley-wizarding-clock-card)
 or [info.md](info.md).
 
 ---
@@ -27,10 +27,10 @@ nix develop
 # Install npm dependencies (first time, or after package.json changes)
 npm install
 
-# Build for local HA dev card (element: weasley-clock-card-dev)
+# Build for local HA dev card (element: weasley-wizarding-clock-card-dev)
 npm run build:dev
 
-# Build for release / HACS (element: weasley-clock-card)
+# Build for release / HACS (element: weasley-wizarding-clock-card)
 npm run build
 
 # Build with upstream element name (element: wizard-clock-card)
@@ -45,12 +45,12 @@ npm run watch:dev
 
 ### Dev card setup
 
-The dev build registers the element as `weasley-clock-card-dev`, allowing it
+The dev build registers the element as `weasley-wizarding-clock-card-dev`, allowing it
 to coexist with the installed production card on the same HA instance:
 
-1. Copy `weasley-clock-card-dev.js` to `config/www/`
-2. Add it as a resource: `/local/weasley-clock-card-dev.js`
-3. Use `type: custom:weasley-clock-card-dev` in a test dashboard card
+1. Copy `weasley-wizarding-clock-card-dev.js` to `config/www/`
+2. Add it as a resource: `/local/weasley-wizarding-clock-card-dev.js`
+3. Use `type: custom:weasley-wizarding-clock-card-dev` in a test dashboard card
 
 ### Upstream-compatible build
 
@@ -69,13 +69,13 @@ upstream PRs. Do not commit it.
 
 ```
 src/
-  wizard-clock-card.ts        # Main card element (LitElement + canvas)
-  wizard-clock-card-editor.ts # Visual card editor element
-weasley-clock-card.js         # Production build — committed, used by HACS
-flake.nix                     # Nix dev shell + nix build package
-package.json                  # npm scripts (build, build:dev, typecheck, etc.)
+  weasley-wizarding-clock-card.ts        # Main card element (LitElement + canvas)
+  weasley-wizarding-clock-card-editor.ts # Visual card editor element
+weasley-wizarding-clock-card.js          # Production build — committed, used by HACS
+flake.nix                                # Nix dev shell + nix build package
+package.json                             # npm scripts (build, build:dev, typecheck, etc.)
 tsconfig.json
-AGENTS.md                     # Architecture, conventions, and agent guidance
+AGENTS.md                                # Architecture, conventions, and agent guidance
 ```
 
 ---

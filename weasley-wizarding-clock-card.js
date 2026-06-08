@@ -749,8 +749,8 @@ var init_decorators = __esm({
   }
 });
 
-// src/wizard-clock-card-editor.ts
-var wizard_clock_card_editor_exports = {};
+// src/weasley-wizarding-clock-card-editor.ts
+var weasley_wizarding_clock_card_editor_exports = {};
 function loadHaComponents() {
   if (!customElements.get("ha-form") || !customElements.get("hui-card-features-editor")) {
     customElements.get("hui-tile-card")?.getConfigElement();
@@ -760,8 +760,8 @@ function loadHaComponents() {
   }
 }
 var WIZARD_SCHEMA, WIZARD_LABELS, WIZARD_HELPERS, ZONE_ENTITY_SELECTOR, ADVANCED_SCHEMA, ADVANCED_LABELS, ADVANCED_HELPERS, WizardClockCardEditor;
-var init_wizard_clock_card_editor = __esm({
-  "src/wizard-clock-card-editor.ts"() {
+var init_weasley_wizarding_clock_card_editor = __esm({
+  "src/weasley-wizarding-clock-card-editor.ts"() {
     "use strict";
     init_lit();
     init_decorators();
@@ -1156,15 +1156,15 @@ var init_wizard_clock_card_editor = __esm({
       r5()
     ], WizardClockCardEditor.prototype, "_wizardsExpanded", 2);
     WizardClockCardEditor = __decorateClass([
-      t3(`${"weasley-clock-card"}-editor`)
+      t3(`${"weasley-wizarding-clock-card"}-editor`)
     ], WizardClockCardEditor);
   }
 });
 
-// src/wizard-clock-card.ts
+// src/weasley-wizarding-clock-card.ts
 init_lit();
 init_decorators();
-var VERSION = "0.10.0";
+var VERSION = "0.11.0";
 var DEBUG = false;
 var FONT_SCALE = 1.1;
 var _injectedFontFaces = /* @__PURE__ */ new Set();
@@ -1217,7 +1217,7 @@ var WizardClockCard = class extends i4 {
     console.info(
       "%c %s %c %s",
       "color: white; background: forestgreen; font-weight: 700;",
-      "weasley-clock-card".toUpperCase(),
+      "weasley-wizarding-clock-card".toUpperCase(),
       "color: forestgreen; background: white; font-weight: 700;",
       VERSION
     );
@@ -1240,8 +1240,8 @@ var WizardClockCard = class extends i4 {
   // Dynamic import keeps editor code out of the critical render path —
   // it is only parsed when someone actually opens the card editor.
   static async getConfigElement() {
-    await Promise.resolve().then(() => (init_wizard_clock_card_editor(), wizard_clock_card_editor_exports));
-    return document.createElement(`${"weasley-clock-card"}-editor`);
+    await Promise.resolve().then(() => (init_weasley_wizarding_clock_card_editor(), weasley_wizarding_clock_card_editor_exports));
+    return document.createElement(`${"weasley-wizarding-clock-card"}-editor`);
   }
   // Minimal valid config shown in the "Add Card" dialog preview.
   // HA always provides hass when calling this for custom cards.
@@ -1282,7 +1282,7 @@ var WizardClockCard = class extends i4 {
   // Safe to query elements and set up observers here.
   firstUpdated() {
     const ctx = this._canvas.getContext("2d");
-    if (!ctx) throw new Error(`Browser does not support ${"weasley-clock-card"} canvas.`);
+    if (!ctx) throw new Error(`Browser does not support ${"weasley-wizarding-clock-card"} canvas.`);
     this._ctx = ctx;
     this._resizeObserver = new ResizeObserver(() => {
       clearTimeout(this._resizeTimeout);
@@ -1731,11 +1731,11 @@ __decorateClass([
   e5("canvas")
 ], WizardClockCard.prototype, "_canvas", 2);
 WizardClockCard = __decorateClass([
-  t3("weasley-clock-card")
+  t3("weasley-wizarding-clock-card")
 ], WizardClockCard);
 window.customCards ??= [];
 window.customCards.push({
-  type: "weasley-clock-card",
+  type: "weasley-wizarding-clock-card",
   name: "Wizard Clock Card",
   description: "Harry Potter-style location clock for Home Assistant",
   preview: true

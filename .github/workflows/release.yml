@@ -16,8 +16,8 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@v14
       - name: Build production JS
         run: nix develop --command npm run build
-      - name: Attach weasley-clock-card.js to release
+      - name: Attach weasley-wizarding-clock-card.js to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
-        run: gh release upload "$TAG" weasley-clock-card.js --clobber
+        run: gh release upload "$TAG" weasley-wizarding-clock-card.js --clobber

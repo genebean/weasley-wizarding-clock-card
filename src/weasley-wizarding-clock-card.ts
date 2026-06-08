@@ -4,11 +4,11 @@ import { HomeAssistant } from 'custom-card-helpers';
 
 // Injected at build time via esbuild --define. Do not assign here or esbuild
 // will inline the literal and --define will have no effect.
-//   Production: --define:CARDNAME='"wizard-clock-card"'
-//   Dev:        --define:CARDNAME='"wizard-clock-card-dev"'
+//   Production: --define:CARDNAME='"weasley-wizarding-clock-card"'
+//   Dev:        --define:CARDNAME='"weasley-wizarding-clock-card-dev"'
 declare const CARDNAME: string;
 
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 
 const DEBUG = false;
 
@@ -215,7 +215,7 @@ class WizardClockCard extends LitElement {
   // Dynamic import keeps editor code out of the critical render path —
   // it is only parsed when someone actually opens the card editor.
   static async getConfigElement() {
-    await import('./wizard-clock-card-editor');
+    await import('./weasley-wizarding-clock-card-editor');
     return document.createElement(`${CARDNAME}-editor`);
   }
 
@@ -815,6 +815,6 @@ class WizardClockCard extends LitElement {
 // Ensure the TypeScript compiler knows about the custom element tag name.
 declare global {
   interface HTMLElementTagNameMap {
-    'wizard-clock-card': WizardClockCard;
+    'weasley-wizarding-clock-card': WizardClockCard;
   }
 }

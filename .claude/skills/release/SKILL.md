@@ -1,5 +1,5 @@
 ---
-description: Run the full release workflow for weasley-clock-card — version bumps, hash, tag, and GitHub release
+description: Run the full release workflow for weasley-wizarding-clock-card — version bumps, hash, tag, and GitHub release
 ---
 
 Execute the release workflow exactly. Do not skip or reorder steps.
@@ -8,7 +8,7 @@ Execute the release workflow exactly. Do not skip or reorder steps.
 
 ### Step 1 — Confirm the version number
 
-Ask the owner for the new version (e.g. `0.11.0`) if not already provided.
+Ask the owner for the new version (e.g. `0.12.0`) if not already provided.
 All files must end up with matching versions.
 
 ### Step 2 — Bump versions in all files
@@ -21,9 +21,9 @@ Edit these in a single commit — all must match:
   - The `""` packages entry `"version"` field
   - WARNING: Missing the second location is a common mistake — check both.
 - `flake.nix` → `version` attribute
-- `src/wizard-clock-card.ts` → `VERSION` constant
+- `src/weasley-wizarding-clock-card.ts` → `VERSION` constant
 
-Also check `package-lock.json` `"name"` field — must be `weasley-clock-card`.
+Also check `package-lock.json` `"name"` field — must be `weasley-wizarding-clock-card`.
 
 ### Step 3 — Recompute npmDepsHash
 
@@ -36,7 +36,7 @@ This must be done any time `package-lock.json` changes — including a version-o
 
     nix develop --command npm run build
 
-Confirm `weasley-clock-card.js` is updated and type-checks pass:
+Confirm `weasley-wizarding-clock-card.js` is updated and type-checks pass:
 
     nix develop --command npm run typecheck
 
@@ -74,17 +74,17 @@ Wait for CI to pass. If `nix build` fails with a hash mismatch:
     git push origin vX.Y.Z
 
 WARNING: Do NOT use `git push --tags` — push only the specific tag by name.
-Pushing the tag triggers the release workflow, which builds `weasley-clock-card.js`
+Pushing the tag triggers the release workflow, which builds `weasley-wizarding-clock-card.js`
 and attaches it to the GitHub release automatically.
 
 ### Step 10 — Create the GitHub release
 
     gh release create vX.Y.Z \
-      --repo genebean/weasley-clock-card \
+      --repo genebean/weasley-wizarding-clock-card \
       --title "vX.Y.Z" \
       --generate-notes
 
-The release workflow will attach `weasley-clock-card.js` to it within ~1 minute.
+The release workflow will attach `weasley-wizarding-clock-card.js` to it within ~1 minute.
 HACS users will then see the update.
 
 ### Step 11 — Clean up
@@ -99,11 +99,11 @@ Delete the local release branch:
 
 - [ ] Version bumped in `package.json`
 - [ ] Version bumped in BOTH places in `package-lock.json`
-- [ ] Name is `weasley-clock-card` in BOTH places in `package-lock.json`
+- [ ] Name is `weasley-wizarding-clock-card` in BOTH places in `package-lock.json`
 - [ ] Version bumped in `flake.nix`
-- [ ] Version bumped in `src/wizard-clock-card.ts` (`VERSION` constant)
+- [ ] Version bumped in `src/weasley-wizarding-clock-card.ts` (`VERSION` constant)
 - [ ] `npmDepsHash` recomputed and updated in `flake.nix`
-- [ ] `weasley-clock-card.js` rebuilt (prod build)
+- [ ] `weasley-wizarding-clock-card.js` rebuilt (prod build)
 - [ ] `npm run typecheck` passes
 - [ ] Single `chore: release vX.Y.Z` commit
 - [ ] Tag created locally (not pushed)
