@@ -8,7 +8,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 //   Dev:        --define:CARDNAME='"weasley-wizarding-clock-card-dev"'
 declare const CARDNAME: string;
 
-const VERSION = '0.11.0';
+const VERSION = '0.11.1';
 
 const DEBUG = false;
 
