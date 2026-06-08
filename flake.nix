@@ -25,13 +25,13 @@
         # `nix build` — produces weasley-wizarding-clock-card.js in result/
         packages.default = pkgs.buildNpmPackage {
           pname = "weasley-wizarding-clock-card";
-          version = "0.11.0";
+          version = "0.11.1";
           src = ./.;
           nodejs = pkgs.nodejs_24;
 
           # Recompute this hash after any package-lock.json change:
           #   nix run nixpkgs#prefetch-npm-deps package-lock.json
-          npmDepsHash = "sha256-wFbu30ZFLPWXOe60cJjyMN+kw+sRPkP7c2ilokqdjik=";
+          npmDepsHash = "sha256-x1n6+TE+2EkyBtCNQde+PtYs7MYp7PG2jcqFo9MUTG8=";
 
           buildPhase = "npm run build";
           installPhase = ''

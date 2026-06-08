@@ -1164,7 +1164,7 @@ var init_weasley_wizarding_clock_card_editor = __esm({
 // src/weasley-wizarding-clock-card.ts
 init_lit();
 init_decorators();
-var VERSION = "0.11.0";
+var VERSION = "0.11.1";
 var DEBUG = false;
 var FONT_SCALE = 1.1;
 var _injectedFontFaces = /* @__PURE__ */ new Set();
