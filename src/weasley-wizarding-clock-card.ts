@@ -807,7 +807,7 @@ class WizardClockCard extends LitElement {
 (window as typeof window & { customCards?: Record<string, unknown>[] }).customCards ??= [];
 (window as typeof window & { customCards?: Record<string, unknown>[] }).customCards!.push({
   type:        CARDNAME,
-  name:        'Wizard Clock Card',
+  name:        'Weasley Wizarding Clock',
   description: 'Harry Potter-style location clock for Home Assistant',
   preview:     true,
 });
