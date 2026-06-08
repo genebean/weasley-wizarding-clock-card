@@ -1,4 +1,5 @@
 {
   "name": "Weasley Wizarding Clock Card",
-  "filename": "weasley-wizarding-clock-card.js"
+  "filename": "weasley-wizarding-clock-card.js",
+  "render_readme": false
 }
