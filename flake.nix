@@ -1,13 +1,17 @@
 {
-  description = "Wizard Clock Card — Harry Potter-style location clock for Home Assistant";
+  description = "Weasley Clock Card — Harry Potter-style location clock for Home Assistant";
 
   inputs = {
-    nixpkgs.url     = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    { self, nixpkgs, flake-utils }:
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
@@ -15,21 +19,24 @@
       in
       {
 
-        # `nix build` — produces wizard-clock-card.js in result/
+        # `nix fmt` — format all Nix files in the tree using nixfmt
+        formatter = pkgs.nixfmt-tree;
+
+        # `nix build` — produces weasley-clock-card.js in result/
         packages.default = pkgs.buildNpmPackage {
-          pname   = "wizard-clock-card";
+          pname = "weasley-clock-card";
           version = "0.9.0";
-          src     = ./.;
-          nodejs  = pkgs.nodejs_24;
+          src = ./.;
+          nodejs = pkgs.nodejs_24;
 
           # Recompute this hash after any package-lock.json change:
           #   nix run nixpkgs#prefetch-npm-deps package-lock.json
           npmDepsHash = "sha256-7qa+nViy2XhxhRH0oPnDtihcOBVdia6HDIyiyKih93E=";
 
-          buildPhase   = "npm run build";
+          buildPhase = "npm run build";
           installPhase = ''
             mkdir -p $out
-            cp wizard-clock-card.js $out/
+            cp weasley-clock-card.js $out/
           '';
         };
 
@@ -39,14 +46,19 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             nodejs_24
+            deadnix # Nix dead-code linter — used by pre-commit hook
+            nixfmt-tree # Nix formatter — used by `nix fmt` and pre-commit
           ];
           shellHook = ''
             if [[ $- == *i* ]]; then
-              echo "Wizard Clock Card dev shell"
+              echo "Weasley Clock Card dev shell"
               echo ""
-              echo "  npm install        — install dependencies (first time or after package.json changes)"
-              echo "  npm run build      — compile src/wizard-clock-card.ts → wizard-clock-card.js"
-              echo "  npm run watch      — rebuild on file changes"
+              echo "  npm install           — install dependencies (first time or after package.json changes)"
+              echo "  npm run build         — compile → weasley-clock-card.js  (published/HACS build)"
+              echo "  npm run build:dev     — compile → weasley-clock-card-dev.js  (local HA dev card)"
+              echo "  npm run build:upstream — compile → wizard-clock-card.js  (upstream-compatible name)"
+              echo "  npm run typecheck     — TypeScript type check without emitting files"
+              echo "  npm run watch:dev     — rebuild weasley-clock-card-dev.js on file changes"
               echo ""
               echo "  After changing package-lock.json, update npmDepsHash in flake.nix:"
               echo "    nix run nixpkgs#prefetch-npm-deps package-lock.json"

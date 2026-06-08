@@ -8,3 +8,11 @@ node_modules/
 
 # Nix
 result
+
+# Dev build — local HA dev card only, never publish
+weasley-clock-card-dev.js
+
+# Upstream-compatible build (wizard-clock-card name) — built on demand with
+# `npm run build:upstream`, not committed. Commit weasley-clock-card.js instead.
+wizard-clock-card.js
+wizard-clock-card-dev.js

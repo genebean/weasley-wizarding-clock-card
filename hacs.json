@@ -1,6 +1,3 @@
 {
-    "name": "Wizard Clock Card",
-    "render_readme": true,
-    "filename": "wizard-clock-card.js",
-    "content_in_root": true
-  }
+  "name": "Weasley Clock Card"
+}

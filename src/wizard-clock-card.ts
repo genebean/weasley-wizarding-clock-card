@@ -798,7 +798,7 @@ class WizardClockCard extends LitElement {
       c.fontName = c.fontname;
       delete c.fontname;
     }
-    return c as WizardClockCardConfig;
+    return c as unknown as WizardClockCardConfig;
   }
 }
 
