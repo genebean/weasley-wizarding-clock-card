@@ -1,15 +1,15 @@
 A Harry Potter-style Weasley family clock for Home Assistant. Family members
 appear as animated clock hands pointing to their current location zone.
 
-![Example clock](https://raw.githubusercontent.com/genebean/weasley-clock-card/main/example.png)
+![Example clock](https://raw.githubusercontent.com/genebean/weasley-wizarding-clock-card/main/example.png)
 
 ## Installation
 
-1. Search for **Weasley Clock Card** in HACS and install it.
+1. Search for **Weasley Wizarding Clock Card** in HACS and install it.
 2. Add the card to your dashboard via the card picker or in YAML:
 
 ```yaml
-type: custom:weasley-clock-card
+type: custom:weasley-wizarding-clock-card
 wizards:
   - entity: person.harry
     name: Harry
@@ -27,7 +27,7 @@ The card has a full visual editor — no YAML required for basic setup.
 
 This card is a drop-in replacement. Install via HACS, then change the `type`
 in each existing card from `custom:wizard-clock-card` to
-`custom:weasley-clock-card`. Everything else — entities, locations, colours,
+`custom:weasley-wizarding-clock-card`. Everything else — entities, locations, colours,
 fonts — carries over unchanged.
 
 ## Configuration
@@ -35,7 +35,7 @@ fonts — carries over unchanged.
 ### Full config reference
 
 ```yaml
-type: custom:weasley-clock-card
+type: custom:weasley-wizarding-clock-card
 
 # ── Required ──────────────────────────────────────────────────────────────────
 

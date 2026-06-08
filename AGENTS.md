@@ -1,13 +1,11 @@
-# AGENTS.md — weasley-clock-card
+# AGENTS.md — weasley-wizarding-clock-card
 
 Harry Potter-style location clock for Home Assistant Lovelace. Shows family
 members (called "wizards") as clock hands pointing to their current location
 zone. Styled after the Weasley family clock from the books.
 
-Published on HACS as **Weasley Clock Card** (`custom:weasley-clock-card`).
-The source files use `wizard-clock-card` as the base filename (upstream
-heritage); the `CARDNAME` constant baked in at build time controls the HA
-element name.
+Published on HACS as **Weasley Wizarding Clock Card** (`custom:weasley-wizarding-clock-card`).
+The `CARDNAME` constant baked in at build time controls the HA element name.
 
 This file is self-contained. It does not rely on any parent AGENTS.md.
 
@@ -33,9 +31,9 @@ application developer**. When working on this code:
 
 ```
 src/
-  wizard-clock-card.ts        # Main card element (LitElement + canvas)
-  wizard-clock-card-editor.ts # Card editor element (HA card editor dialog)
-weasley-clock-card.js         # Prod build — committed, used by HACS
+  weasley-wizarding-clock-card.ts        # Main card element (LitElement + canvas)
+  weasley-wizarding-clock-card-editor.ts # Card editor element (HA card editor dialog)
+weasley-wizarding-clock-card.js         # Prod build — committed, used by HACS
 flake.nix                     # Nix dev shell + nix build package
 package.json                  # npm scripts (build, build:dev, typecheck, etc.)
 tsconfig.json
@@ -49,7 +47,7 @@ info.md                       # HACS store display page (user docs)
 
 Generated files (gitignored — never commit):
 ```
-weasley-clock-card-dev.js   # dev build (element: weasley-clock-card-dev)
+weasley-wizarding-clock-card-dev.js   # dev build (element: weasley-wizarding-clock-card-dev)
 wizard-clock-card.js        # upstream-compat build (element: wizard-clock-card)
 ```
 
@@ -74,8 +72,8 @@ time. The constant controls the custom element name HA looks for.
 
 | Command | Output file | Element name | Purpose |
 |---|---|---|---|
-| `npm run build` | `weasley-clock-card.js` | `weasley-clock-card` | Prod / HACS release |
-| `npm run build:dev` | `weasley-clock-card-dev.js` | `weasley-clock-card-dev` | Local HA dev testing |
+| `npm run build` | `weasley-wizarding-clock-card.js` | `weasley-wizarding-clock-card` | Prod / HACS release |
+| `npm run build:dev` | `weasley-wizarding-clock-card-dev.js` | `weasley-wizarding-clock-card-dev` | Local HA dev testing |
 | `npm run build:upstream` | `wizard-clock-card.js` | `wizard-clock-card` | Upstream PR testing |
 | `npm run typecheck` | (no output) | — | Type-check only, no emit |
 
@@ -93,7 +91,7 @@ nix develop --command npm run build:dev
 Only run `npm run build` (prod) when cutting an actual release — not during
 feature work. The prod file should not be updated until dev is ready to ship.
 
-`nix build` (the Nix package build) produces `weasley-clock-card.js` in
+`nix build` (the Nix package build) produces `weasley-wizarding-clock-card.js` in
 `result/` and is used for release packaging — same rule applies.
 
 `build:upstream` is gitignored. Use it only when preparing an upstream PR to
@@ -104,10 +102,10 @@ name for compatibility testing. Do not commit it.
 
 ## Architecture
 
-### Card element (`wizard-clock-card.ts`)
+### Card element (`weasley-wizarding-clock-card.ts`)
 
-- `WizardClockCard extends LitElement` — registered as `weasley-clock-card`
-  (prod), `weasley-clock-card-dev` (dev), or `wizard-clock-card` (upstream
+- `WizardClockCard extends LitElement` — registered as `weasley-wizarding-clock-card`
+  (prod), `weasley-wizarding-clock-card-dev` (dev), or `wizard-clock-card` (upstream
   compat) via `@customElement(CARDNAME)` — baked in at build time
 - Renders an `<ha-card>` containing a single `<canvas>`
 - Canvas is sized by JS in `_updateAndDraw()`, not CSS. CSS initialises it to
@@ -133,10 +131,10 @@ const size = (availH > 50 && availH < availW) ? availH : availW;
 if (size <= 0) { requestAnimationFrame(() => this._updateAndDraw()); return; }
 ```
 
-### Editor element (`wizard-clock-card-editor.ts`)
+### Editor element (`weasley-wizarding-clock-card-editor.ts`)
 
 - `WizardClockCardEditor extends LitElement` — registered as `${CARDNAME}-editor`
-  (e.g. `weasley-clock-card-editor` in prod)
+  (e.g. `weasley-wizarding-clock-card-editor` in prod)
 - Fires `config-changed` custom events; HA calls `setConfig()` in response
 - Uses HA-native components exclusively (`ha-form`, `ha-expansion-panel`,
   `ha-selector`, `ha-icon-button`, `ha-alert`, `ha-button`)
@@ -300,7 +298,7 @@ Triggers on push and PR to `main`. Jobs:
 
 ### Release workflow (`.github/workflows/release.yml`)
 
-Triggers when a GitHub Release is published. Builds `weasley-clock-card.js`
+Triggers when a GitHub Release is published. Builds `weasley-wizarding-clock-card.js`
 (prod) and attaches it to the release as a downloadable asset. HACS downloads
 this asset for users.
 
@@ -322,7 +320,7 @@ Nix inputs are handled separately by the `update-flake-lock` workflow.
 - When writing `gh pr create` or `gh pr edit` bodies with backticks, use
   `PREOF` (not `EOF`) as the heredoc delimiter to avoid shell interpretation
 - This repo is a fork of `malcolmrigg/wizard-clock-card`. Use
-  `--repo genebean/weasley-clock-card` with `gh pr create` — without it, `gh`
+  `--repo genebean/weasley-wizarding-clock-card` with `gh pr create` — without it, `gh`
   may default to creating the PR against the upstream fork
 
 ---

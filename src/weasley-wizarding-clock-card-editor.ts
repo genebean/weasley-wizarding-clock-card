@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant } from 'custom-card-helpers';
-import type { WizardConfig, WizardClockCardConfig } from './wizard-clock-card';
+import type { WizardConfig, WizardClockCardConfig } from './weasley-wizarding-clock-card';
 
 declare const CARDNAME: string;
 
@@ -452,6 +452,6 @@ class WizardClockCardEditor extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'wizard-clock-card-editor': WizardClockCardEditor;
+    'weasley-wizarding-clock-card-editor': WizardClockCardEditor;
   }
 }
