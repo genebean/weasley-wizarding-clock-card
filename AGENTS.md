@@ -319,9 +319,11 @@ Nix inputs are handled separately by the `update-flake-lock` workflow.
 - Delete merged branches locally after the PR merges
 - When writing `gh pr create` or `gh pr edit` bodies with backticks, use
   `PREOF` (not `EOF`) as the heredoc delimiter to avoid shell interpretation
-- This repo is a fork of `malcolmrigg/wizard-clock-card`. Use
-  `--repo genebean/weasley-wizarding-clock-card` with `gh pr create` — without it, `gh`
-  may default to creating the PR against the upstream fork
+- This repo is a fork of `malcolmrigg/wizard-clock-card`. Always pass
+  `--repo genebean/weasley-wizarding-clock-card` to every `gh` command that
+  targets this repo (`gh issue create`, `gh pr create`, `gh release create`,
+  etc.) — without it, `gh` may default to operating against the upstream fork.
+  All issues, PRs, and releases belong here, not upstream.
 
 ---
 
