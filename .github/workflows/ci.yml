@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/dependency-review-action@v5.0.0
+      - uses: actions/dependency-review-action@v5.0.1
 
   # hacs/action validates hacs.json and confirms the card JS file is present.
   # Note: hassfest (home-assistant/actions) validates Python integrations
